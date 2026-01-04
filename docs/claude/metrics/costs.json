@@ -1,0 +1,30 @@
+{
+  "currency": "USD",
+  "pricing": {
+    "_note": "Claude pricing estimates (may vary)",
+    "input_per_1k_tokens": 0.003,
+    "output_per_1k_tokens": 0.015
+  },
+  "total": 0.1,
+  "features": {
+    "prisma-setup": {
+      "input_tokens": 10500,
+      "output_tokens": 4500,
+      "total": 0.1,
+      "completed_at": "2025-12-31"
+    }
+  },
+  "monthly_budget": 100,
+  "alerts": {
+    "warn_at_percent": 75,
+    "critical_at_percent": 90
+  },
+  "_example_feature_entry": {
+    "slug": "example-feature",
+    "input_tokens": 30000,
+    "output_tokens": 15000,
+    "total": 0.315,
+    "sessions": 3,
+    "completed_at": "2025-01-15"
+  }
+}

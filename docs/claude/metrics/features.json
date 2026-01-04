@@ -1,0 +1,50 @@
+[
+  {
+    "slug": "prisma-setup",
+    "name": "Prisma ORM Integration",
+    "started_at": "2025-12-31T15:45:00Z",
+    "completed_at": "2025-12-31T16:30:00Z",
+    "duration_minutes": 45,
+    "phases_completed": [
+      "spec",
+      "architecture",
+      "data-model",
+      "backend",
+      "tests",
+      "security",
+      "review",
+      "docs"
+    ],
+    "phases_skipped": [
+      "frontend",
+      "mobile",
+      "performance"
+    ],
+    "files_created": 7,
+    "files_modified": 4,
+    "tests_added": 7,
+    "coverage_delta": null,
+    "lighthouse_score": null,
+    "tokens_estimated": 15000,
+    "adr": "ADR-001-prisma-integration.md",
+    "working_note": "prisma-setup.md",
+    "dependencies_added": [
+      "@prisma/client@^6.0.0",
+      "prisma@^6.0.0"
+    ],
+    "breaking_changes": false,
+    "requires_migration": true,
+    "notes": "Implementation complete de Prisma ORM avec modeles User et File. Downgrade de Prisma 7 vers 6 pour compatibilite avec le format schema classique."
+  },
+  {
+    "slug": "prisma-setup",
+    "started_at": "2025-12-31T17:58:11.914Z",
+    "completed_at": "2025-12-31T17:58:11.914Z",
+    "duration_minutes": 0,
+    "phases_completed": [],
+    "files_created": 7,
+    "files_modified": 4,
+    "tests_added": 7,
+    "tokens_estimated": 15000
+  }
+]

@@ -1,0 +1,54 @@
+{
+  "name": "cloudvault",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "dotenv -- turbo run dev",
+    "build": "dotenv -- turbo run build",
+    "start": "dotenv -- turbo run start",
+    "preview": "pnpm build && pnpm start",
+    "test": "dotenv -- turbo run test",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "turbo run clean && rm -rf node_modules .turbo",
+
+    "dev:api": "dotenv -- pnpm --filter @cloudvault/api dev",
+    "dev:web": "dotenv -- pnpm --filter @cloudvault/web dev",
+
+    "build:api": "dotenv -- pnpm --filter @cloudvault/api build",
+    "build:web": "dotenv -- pnpm --filter @cloudvault/web build",
+
+    "start:api": "dotenv -- pnpm --filter @cloudvault/api start",
+    "start:web": "dotenv -- pnpm --filter @cloudvault/web start",
+
+    "preview:api": "pnpm build:api && pnpm start:api",
+    "preview:web": "pnpm build:web && pnpm start:web",
+
+    "test:api": "dotenv -- pnpm --filter @cloudvault/api test",
+    "test:web": "pnpm --filter @cloudvault/web test",
+
+    "db:generate": "dotenv -- pnpm --filter @cloudvault/api exec prisma generate",
+    "db:migrate": "dotenv -- pnpm --filter @cloudvault/api exec prisma migrate dev",
+    "db:migrate:prod": "dotenv -- pnpm --filter @cloudvault/api exec prisma migrate deploy",
+    "db:push": "dotenv -- pnpm --filter @cloudvault/api exec prisma db push",
+    "db:studio": "dotenv -- pnpm --filter @cloudvault/api exec prisma studio",
+    "db:reset": "dotenv -- pnpm --filter @cloudvault/api exec prisma migrate reset"
+  },
+  "devDependencies": {
+    "@cloudvault/eslint-config": "workspace:*",
+    "@cloudvault/typescript-config": "workspace:*",
+    "dotenv-cli": "^8.0.0",
+    "prettier": "^3.4.2",
+    "turbo": "^2.5.8"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "qs": ">=6.14.1"
+    }
+  }
+}

@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// === AUTH PROVIDER ENUM ===
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+// === USER MODEL ===
+// Represents a user of the CloudVault platform
+model User {
+  id            String       @id @default(uuid())
+  email         String       @unique
+  password      String?      // Nullable for OAuth users
+  name          String?
+  avatar        String?
+  provider      AuthProvider @default(LOCAL)
+  providerId    String?      // Google ID, etc.
+  emailVerified Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  files         File[]
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+  @@index([provider, providerId])
+  @@map("users")
+}
+
+// === REFRESH TOKEN MODEL ===
+// Stores refresh tokens for JWT auto-refresh
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+// === FILE MODEL ===
+// Represents a file stored in S3
+model File {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  s3Key        String   @unique
+  s3Url        String
+  thumbnailKey String?
+  thumbnailUrl String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([s3Key])
+  @@index([createdAt])
+  @@map("files")
+}

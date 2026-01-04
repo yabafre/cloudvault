@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+!/pnpm-lock.yaml
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+
+# Environment variables - CRITICAL: Never commit secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Prisma
+prisma/migrations/*_migration_lock.toml
+
+# Turbo
+.turbo/
+
+# OS files
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+!/.mcp.json
+
+# AI config
+.claude/
+.codex/
+
