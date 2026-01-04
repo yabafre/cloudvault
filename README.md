@@ -189,6 +189,3 @@ MIT
 ---
 
 ⭐ Si ce projet vous aide, n'hésitez pas à lui donner une étoile !
-```
-
-***
