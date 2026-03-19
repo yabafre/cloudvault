@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { useAuthStatus, useUser } from '@/lib/stores/auth'
-import { useAuthContext } from '@/components/providers/auth-provider'
+import { useAuthStore } from '@/lib/stores/auth'
 import { Spinner } from '@/components/ui/spinner'
+import * as authApi from '@/lib/api/auth'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -13,32 +13,42 @@ interface AuthGuardProps {
 /**
  * Client-side auth guard component
  * Wraps protected routes and handles:
- * - Initial auth state loading (waits for AuthProvider initialization)
+ * - Initial auth state loading
  * - Redirect to login if unauthenticated
  * - Loading skeleton during auth check
  */
 export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const { isInitialized } = useAuthContext()
-  const status = useAuthStatus()
-  const user = useUser()
-
-  const isLoading = !isInitialized || status === 'loading'
-  const isAuthenticated = status === 'authenticated' && !!user
+  const [isChecking, setIsChecking] = useState(true)
+  const { user, setAuth, clearAuth } = useAuthStore()
 
   useEffect(() => {
-    // Wait for auth to be initialized
-    if (!isInitialized) return
+    async function checkAuth() {
+      // If we already have a user, we're authenticated
+      if (user) {
+        setIsChecking(false)
+        return
+      }
 
-    // If not authenticated after initialization, redirect to login
-    if (status === 'unauthenticated') {
-      const redirectUrl = encodeURIComponent(pathname)
-      router.replace(`/auth/login?redirect=${redirectUrl}`)
+      try {
+        // Try to refresh token (uses httpOnly cookie)
+        const tokens = await authApi.refreshToken()
+        const profile = await authApi.getProfile()
+        setAuth(profile, tokens.accessToken)
+        setIsChecking(false)
+      } catch {
+        // No valid session - redirect to login
+        clearAuth()
+        const redirectUrl = encodeURIComponent(pathname)
+        router.replace(`/auth/login?redirect=${redirectUrl}`)
+      }
     }
-  }, [isInitialized, status, router, pathname])
 
-  if (isLoading) {
+    checkAuth()
+  }, [user, setAuth, clearAuth, router, pathname])
+
+  if (isChecking) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -49,9 +59,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
     )
   }
 
-  if (!isAuthenticated) {
-    // Will redirect via useEffect
-    return null
+  if (!user) {
+    return null // Will redirect
   }
 
   return <>{children}</>

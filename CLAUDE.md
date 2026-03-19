@@ -109,21 +109,32 @@ apps/
 │   └── test/                 # E2E tests
 │
 └── web/              # Next.js 16 frontend (port 3000)
-    ├── app/              # App Router structure
-    │   ├── layout.tsx        # Root layout with providers
-    │   ├── page.tsx          # Homepage/landing page
-    │   ├── auth/             # Auth pages (login, register, callback)
-    │   └── dashboard/        # Protected dashboard
+    ├── core/                 # Shared application logic (feature-based)
+    │   ├── auth/             # Authentication feature module
+    │   │   ├── api/              # API client (client.ts, auth.ts)
+    │   │   ├── stores/           # Zustand store (auth.ts)
+    │   │   ├── hooks/            # Shared hooks (use-auth, use-logout, use-profile)
+    │   │   └── components/       # Shared components (auth-guard.tsx)
+    │   └── providers/        # Unified app providers (index.tsx)
+    ├── app/                  # App Router structure
+    │   ├── layout.tsx            # Root layout with providers
+    │   ├── page.tsx              # Homepage/landing page
+    │   ├── auth/                 # Auth pages
+    │   │   ├── login/
+    │   │   │   ├── _hooks/           # Local hooks (use-login.ts)
+    │   │   │   ├── _components/      # Local components (login-form.tsx)
+    │   │   │   └── page.tsx
+    │   │   ├── register/
+    │   │   │   ├── _hooks/           # Local hooks (use-register.ts)
+    │   │   │   ├── _components/      # Local components (register-form.tsx)
+    │   │   │   └── page.tsx
+    │   │   └── callback/
+    │   │       ├── _components/      # Local components (callback-content.tsx)
+    │   │       └── page.tsx
+    │   └── dashboard/            # Protected dashboard (uses AuthGuard)
     ├── components/
-    │   ├── ui/               # shadcn/ui components
-    │   ├── auth/             # Auth forms and guards
-    │   ├── dashboard/        # Dashboard components
-    │   └── providers/        # React context providers
-    ├── lib/
-    │   ├── stores/           # Zustand stores
-    │   └── api/              # API client and endpoints
-    ├── hooks/                # Custom React hooks global
-    └── proxy.ts              # Next.js 16 edge proxy
+    │   └── ui/                   # shadcn/ui components
+    └── proxy.ts                  # Next.js 16 edge proxy
 
 packages/
 ├── eslint-config/    # Shared ESLint configuration
@@ -165,6 +176,10 @@ infra/
 - **Forms:** react-hook-form + zod validation
 - **UI Components:** shadcn/ui (Radix + Tailwind)
 - **Routing Protection:** proxy.ts (Next.js 16) + AuthGuard component
+- **Feature-based Organization:**
+  - `core/` contains shared logic organized by feature (auth, providers)
+  - Page-specific code uses `_hooks/` and `_components/` folders (Next.js convention)
+  - Underscore prefix prevents Next.js from treating folders as routes
 
 **4. Shared Types Package:**
 - Central location for TypeScript interfaces/types shared between frontend and backend
@@ -251,6 +266,7 @@ These should be implemented to run `pnpm lint`, `pnpm test`, `pnpm build`.
 - [x] Google OAuth integration
 - [x] Frontend auth system (login, register, logout, protected routes)
 - [x] Homepage/landing page
+- [ ] Responsive design
 - [ ] File upload to S3 with pre-signed URLs
 - [ ] File listing and deletion
 - [ ] Automatic thumbnail generation
@@ -363,6 +379,87 @@ getProfile(@CurrentUser() user: any) {
 getFiles(@CurrentUser('id') userId: string) {
   // Just the user ID
 }
+```
+
+### Frontend Authentication Patterns
+
+**Importing from core/auth (shared code):**
+```typescript
+// For auth state and shared hooks - import from core/auth
+import { useAuth } from '@/core/auth/hooks/use-auth';
+import { useLogout } from '@/core/auth/hooks/use-logout';
+import { useProfile } from '@/core/auth/hooks/use-profile';
+import { AuthGuard } from '@/core/auth/components/auth-guard';
+import { useAuthStore } from '@/core/auth/stores/auth';
+
+// Using auth state
+function MyComponent() {
+  const { isAuthenticated, user, isLoading } = useAuth();
+  const logout = useLogout();
+
+  if (isLoading) return <Loading />;
+  if (!isAuthenticated) return <Redirect to="/auth/login" />;
+
+  return <div>Welcome {user?.name}</div>;
+}
+```
+
+**Protecting routes with AuthGuard:**
+```typescript
+// In a page component (e.g., app/dashboard/page.tsx)
+import { AuthGuard } from '@/core/auth/components/auth-guard';
+
+export default function DashboardPage() {
+  return (
+    <AuthGuard>
+      <DashboardContent />
+    </AuthGuard>
+  );
+}
+
+// AuthGuard redirects to /auth/login if not authenticated
+```
+
+**Page-specific hooks (local to page):**
+```typescript
+// In app/auth/login/_hooks/use-login.ts
+// Local hook only used by login page
+export function useLogin() {
+  const [isLoading, setIsLoading] = useState(false);
+  const setTokens = useAuthStore((state) => state.setTokens);
+
+  const login = async (credentials: LoginCredentials) => {
+    setIsLoading(true);
+    const tokens = await authApi.login(credentials);
+    setTokens(tokens);
+    // ...
+  };
+
+  return { login, isLoading };
+}
+
+// In app/auth/login/_components/login-form.tsx
+// Local component only used by login page
+import { useLogin } from '../_hooks/use-login';
+
+export function LoginForm() {
+  const { login, isLoading } = useLogin();
+  // ...
+}
+```
+
+**File organization convention:**
+```
+core/auth/           # SHARED across the app
+├── api/             # API client functions
+├── stores/          # Zustand stores
+├── hooks/           # Reusable hooks (useAuth, useLogout, useProfile)
+└── components/      # Shared components (AuthGuard)
+
+app/auth/login/      # PAGE-SPECIFIC to login
+├── _hooks/          # Local hooks (useLogin) - underscore = not a route
+├── _components/     # Local components (LoginForm)
+└── page.tsx         # Page entry point
 ```
 
 ## Troubleshooting

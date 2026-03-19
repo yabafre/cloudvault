@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,15 +41,9 @@ export function LoginForm() {
     setError(null)
     try {
       await login(data)
-      toast.success('Welcome back!', {
-        description: 'You have been signed in successfully.',
-      })
     } catch (err) {
       const message = await getErrorMessage(err)
       setError(message)
-      toast.error('Sign in failed', {
-        description: message,
-      })
     }
   }
 

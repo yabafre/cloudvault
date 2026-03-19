@@ -1,10 +1,9 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Cloud, LogOut, Settings, User } from 'lucide-react'
+import Link from 'next/link';
+import { Cloud, LogOut, Settings, User } from 'lucide-react';
 
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,15 +11,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { useUser, useAuthStore } from '@/lib/stores/auth'
-import { useLogout } from '@/hooks/use-auth'
-import { ModeToggle } from '@/components/common/mode-toggle'
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useUser } from '@/core/auth/stores/auth';
+import { useLogout } from '@/core/auth/hooks/use-logout';
+import { ModeToggle } from '@/components/common/mode-toggle';
 
 export function DashboardNav() {
-  const user = useUser()
-  const { mutate: logout, isPending: isLoggingOut } = useLogout()
+  const user = useUser();
+  const { logout, isPending: isLoggingOut } = useLogout();
 
   const initials = user?.name
     ? user.name
@@ -29,12 +28,15 @@ export function DashboardNav() {
         .join('')
         .toUpperCase()
         .slice(0, 2)
-    : user?.email?.slice(0, 2).toUpperCase() || '??'
+    : user?.email?.slice(0, 2).toUpperCase() || '??';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 font-semibold"
+        >
           <Cloud className="h-6 w-6" />
           <span>CloudVault</span>
         </Link>
@@ -46,7 +48,10 @@ export function DashboardNav() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.avatar || undefined} alt={user?.name || 'User'} />
+                  <AvatarImage
+                    src={user?.avatar || undefined}
+                    alt={user?.name || 'User'}
+                  />
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
               </Button>
@@ -89,5 +94,5 @@ export function DashboardNav() {
         </nav>
       </div>
     </header>
-  )
+  );
 }

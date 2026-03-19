@@ -58,33 +58,11 @@ export async function getProfile(): Promise<User> {
 }
 
 /**
- * Generate OAuth state for CSRF protection
- */
-function generateOAuthState(): string {
-  const state = crypto.randomUUID()
-  if (typeof window !== 'undefined') {
-    sessionStorage.setItem('oauth_state', state)
-  }
-  return state
-}
-
-/**
- * Validate OAuth state from callback
- */
-export function validateOAuthState(returnedState: string | null): boolean {
-  if (typeof window === 'undefined' || !returnedState) return false
-  const storedState = sessionStorage.getItem('oauth_state')
-  sessionStorage.removeItem('oauth_state')
-  return storedState === returnedState
-}
-
-/**
- * Initiate Google OAuth - returns redirect URL with state parameter
+ * Initiate Google OAuth - returns redirect URL
  */
 export function getGoogleAuthUrl(): string {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
-  const state = generateOAuthState()
-  return `${apiUrl}/auth/google?state=${encodeURIComponent(state)}`
+  return `${apiUrl}/auth/google`
 }
 
 export { getErrorMessage }

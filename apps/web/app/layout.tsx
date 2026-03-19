@@ -1,11 +1,8 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { ThemeProvider } from '@/components/common/theme-provider';
-import { AuthProvider } from '@/components/providers/auth-provider';
-import { Toaster } from '@/components/ui/sonner';
+import { Providers } from '@/core/providers';
 import './globals.css';
-import { ReactQueryProvider } from '@/core/providers/reactQuery';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -32,19 +29,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ReactQueryProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <AuthProvider>
-              {children}
-            </AuthProvider>
-            <Toaster position="top-right" richColors />
-          </ThemeProvider>
-        </ReactQueryProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

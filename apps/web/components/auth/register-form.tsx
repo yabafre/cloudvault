@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff, Check, X } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -56,15 +55,9 @@ export function RegisterForm() {
     setError(null)
     try {
       await register(data)
-      toast.success('Account created!', {
-        description: 'Welcome to CloudVault. Your account is ready.',
-      })
     } catch (err) {
       const message = await getErrorMessage(err)
       setError(message)
-      toast.error('Registration failed', {
-        description: message,
-      })
     }
   }
 

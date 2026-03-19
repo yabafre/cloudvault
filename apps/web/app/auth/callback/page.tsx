@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { CallbackContent } from './callback-content'
+import { CallbackContent } from './_components/callback-content'
 import { Spinner } from '@/components/ui/spinner'
 
 // Force dynamic rendering for this page
