@@ -95,16 +95,38 @@ Prevents race conditions when multiple requests fail simultaneously.
 
 ### File Structure
 ```
+app/(page)/
+|-- page.tsx                  # < 40 lignes
+|-- loading.tsx               # Skeleton
+|-- error.tsx                 # Error boundary
+|-- _hooks/                   # LOGIQUE METIER (local) ICI
+|   |-- index.ts
+|   |-- use-features.ts       # Query (liste + filtres)
+|   |-- use-feature.ts        # Query (single)
+|   |-- use-create-feature.ts # Mutation
+|   |-- use-update-feature.ts # Mutation
+|   +-- use-delete-feature.ts # Mutation + confirm
+|-- _components/              # Composants LEGERS (local)
+|   |-- feature-list.tsx      # Utilise hooks
+|   |-- feature-card.tsx      # Presentationnel
+|   |-- feature-form.tsx      # Form generique
+|   +-- feature-filters.tsx   # Presentationnel
+|-- _actions/                 # Server Actions (local)
+|   |-- index.ts
+|   +-- *.action.ts
++-- _lib/
+    +-- feature.utils.ts
+______
 apps/web/
-├── lib/
+├── core/
 │   ├── api/client.ts      # ky with interceptors
 │   ├── api/auth.ts        # auth API functions
 │   └── stores/auth.ts     # Zustand store
 ├── hooks/
-│   └── use-auth.ts        # combined auth hook
+│   └── use-auth.ts        # combined auth hook (global hook)
 ├── components/auth/
 │   └── auth-guard.tsx     # client protection
-└── middleware.ts          # edge protection
+└── proxy.ts          # edge protection
 ```
 
 ### Dependencies

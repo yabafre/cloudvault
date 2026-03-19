@@ -1,332 +1,447 @@
-# Frontend Authentication System - Specification
+# Frontend Auth System: Restructuration Complete
 
-## Status: IN_PROGRESS
-
-## Overview
-
-Implementation of the complete authentication system on the Next.js 16 frontend for CloudVault, connecting to the existing NestJS backend API.
-
-## Scope
-
-### In Scope
-- Login page with email/password form
-- Register page with validation
-- OAuth Google integration
-- Auth callback handler
-- Protected dashboard route
-- Auth state management (Zustand)
-- Token management (access + refresh)
-- Automatic token refresh
-- Route guards (middleware + client)
-- Logout functionality
-
-### Out of Scope
-- Password reset flow
-- Email verification UI
-- Account settings
-- Profile editing
-
-## User Stories
-
-### US-1: Registration
-**As a** new user
-**I want to** create an account with my email
-**So that** I can store and manage my files securely
-
-**Acceptance Criteria:**
-- Form with email, password, and optional name fields
-- Password minimum 8 characters
-- Real-time validation feedback
-- Error handling for existing email
-- Redirect to dashboard on success
-- Google OAuth alternative available
-
-### US-2: Login
-**As a** registered user
-**I want to** login with my credentials
-**So that** I can access my files
-
-**Acceptance Criteria:**
-- Form with email and password fields
-- Error messages for invalid credentials
-- Remember me option (optional v2)
-- Redirect to dashboard on success
-- Link to registration page
-- Google OAuth alternative available
-
-### US-3: OAuth Login
-**As a** user
-**I want to** login with my Google account
-**So that** I don't have to remember another password
-
-**Acceptance Criteria:**
-- Google button on login/register pages
-- Redirect to Google consent screen
-- Callback handles token extraction
-- Automatic account creation/linking
-- Redirect to dashboard on success
-
-### US-4: Protected Routes
-**As a** user
-**I want** protected pages to require authentication
-**So that** my data remains secure
-
-**Acceptance Criteria:**
-- Unauthenticated users redirected to login
-- No flash of protected content
-- Loading state during auth check
-- Previous URL remembered for post-login redirect
-
-### US-5: Session Persistence
-**As a** user
-**I want** my session to persist across page refreshes
-**So that** I don't have to login repeatedly
-
-**Acceptance Criteria:**
-- Session survives page refresh
-- Silent token refresh when expired
-- Automatic logout on refresh token expiry
-- Clear error message on session end
-
-### US-6: Logout
-**As a** logged-in user
-**I want to** logout
-**So that** I can secure my session on shared devices
-
-**Acceptance Criteria:**
-- Logout button accessible in dashboard
-- Clears local auth state
-- Invalidates server-side token
-- Redirects to login page
-
-## Technical Specification
-
-### Pages Structure
-
-```
-apps/web/app/
-├── (auth)/
-│   ├── layout.tsx        # Auth layout (centered, no nav)
-│   ├── login/
-│   │   └── page.tsx      # Login form
-│   ├── register/
-│   │   └── page.tsx      # Register form
-│   └── callback/
-│       └── page.tsx      # OAuth callback handler
-├── (dashboard)/
-│   ├── layout.tsx        # Dashboard layout (with nav)
-│   └── page.tsx          # Dashboard home
-└── middleware.ts         # Route protection
-```
-
-### Components
-
-```
-apps/web/
-├── components/
-│   └── auth/
-│       ├── auth-card.tsx         # (existing)
-│       ├── google-button.tsx     # (existing)
-│       ├── divider-with-text.tsx # (existing)
-│       ├── login-form.tsx        # Login form component
-│       ├── register-form.tsx     # Register form component
-│       └── auth-guard.tsx        # Client-side auth wrapper
-├── lib/
-│   ├── api/
-│   │   ├── client.ts            # ky HTTP client
-│   │   └── auth.ts              # Auth API functions
-│   └── stores/
-│       └── auth.ts              # Zustand auth store
-└── hooks/
-    ├── use-auth.ts              # Combined auth hook
-    ├── use-login.ts             # Login mutation
-    ├── use-register.ts          # Register mutation
-    └── use-logout.ts            # Logout mutation
-```
-
-### State Management
-
-**Zustand Store:**
-```typescript
-interface AuthState {
-  user: User | null;
-  accessToken: string | null;
-  status: 'loading' | 'authenticated' | 'unauthenticated';
-
-  // Actions
-  setAuth: (user: User, accessToken: string) => void;
-  setAccessToken: (token: string) => void;
-  clearAuth: () => void;
-  setLoading: () => void;
-}
-```
-
-### API Integration
-
-**Endpoints to integrate:**
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/auth/register` | POST | Create account |
-| `/auth/login` | POST | Get tokens |
-| `/auth/refresh` | POST | Refresh access token |
-| `/auth/logout` | POST | Invalidate session |
-| `/auth/profile` | GET | Get user data |
-| `/auth/google` | GET | OAuth initiation |
-
-**Token Storage:**
-- Access token: In-memory (Zustand)
-- Refresh token: httpOnly cookie (set by API)
-
-### Form Validation
-
-**Login Schema:**
-```typescript
-const loginSchema = z.object({
-  email: z.email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
-});
-```
-
-**Register Schema:**
-```typescript
-const registerSchema = z.object({
-  email: z.email("Invalid email address"),
-  password: z.string()
-    .min(8, "Minimum 8 characters")
-    .regex(/[A-Z]/, "Must contain uppercase")
-    .regex(/[0-9]/, "Must contain number"),
-  name: z.string().optional(),
-});
-```
-
-### Route Protection
-
-**Middleware (Edge):**
-```typescript
-// Protected routes
-const protectedPaths = ['/dashboard', '/files', '/settings'];
-
-// Auth routes (redirect if logged in)
-const authPaths = ['/auth/login', '/auth/register'];
-```
-
-**Client Guard:**
-- Wraps dashboard layout
-- Attempts silent refresh on mount
-- Shows skeleton during check
-- Redirects on failure
-
-### Error Handling
-
-| Error Code | Message | Action |
-|------------|---------|--------|
-| 401 | Invalid credentials | Show form error |
-| 409 | Email exists | Show form error + link to login |
-| 429 | Too many attempts | Show cooldown message |
-| 500 | Server error | Show toast + retry option |
-
-### Loading States
-
-1. **Initial load**: Full page skeleton
-2. **Form submit**: Button spinner + disabled state
-3. **Route change**: Top progress bar
-4. **Token refresh**: Silent (no UI)
-
-## UI/UX Design
-
-### Login Page
-- Centered card layout
-- Logo at top
-- Email input
-- Password input (with show/hide toggle)
-- "Forgot password?" link (non-functional for MVP)
-- Submit button
-- Divider "or"
-- Google button
-- "Don't have an account? Register" link
-
-### Register Page
-- Centered card layout
-- Logo at top
-- Name input (optional)
-- Email input
-- Password input (with strength indicator)
-- Submit button
-- Divider "or"
-- Google button
-- "Already have an account? Login" link
-
-### Dashboard
-- Top navigation bar
-- User avatar + name dropdown
-- Logout option in dropdown
-- Main content area
-
-## Dependencies
-
-### Required (to add)
-```bash
-pnpm --filter @cloudvault/web add zustand ky
-```
-
-### Already Present
-- @tanstack/react-query
-- react-hook-form
-- zod
-- @hookform/resolvers
-
-## Success Metrics
-
-| Metric | Target |
-|--------|--------|
-| Login form TTI | < 1.5s |
-| Auth state hydration | < 100ms |
-| Token refresh latency | < 300ms |
-| Error rate | < 0.1% |
-
-## Testing Strategy
-
-### Unit Tests
-- Zustand store actions
-- Form validation schemas
-- API client functions
-
-### Integration Tests
-- Login flow (happy path)
-- Register flow (happy path)
-- Token refresh flow
-- Error handling
-
-### E2E Tests
-- Full login journey
-- Full register journey
-- OAuth flow
-- Session persistence
-- Protected route access
-
-## Implementation Order
-
-1. Setup Zustand store
-2. Setup ky API client
-3. Create auth API functions
-4. Implement login page + form
-5. Implement register page + form
-6. Add middleware protection
-7. Create auth guard component
-8. Implement OAuth callback
-9. Add dashboard layout with logout
-10. Test all flows
-
-## Risks and Mitigations
-
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| Cookie not sent (CORS) | Medium | High | Test early, document CORS config |
-| Hydration mismatch | Medium | Medium | Proper SSR setup, useEffect guards |
-| Token race conditions | Low | High | Request queue pattern |
-| OAuth state mismatch | Low | Medium | Verify state parameter |
+## Metadonnees
+- **Status**: READY_FOR_IMPL
+- **Priorite**: P0
+- **Estimation**: M (3-5 jours)
+- **Cree**: 2026-01-05
+- **Auteur**: pm-spec agent
+- **ADR**: ADR-003-frontend-auth-restructuring.md
 
 ---
 
-**Author:** Claude (PM-Spec Agent)
-**Date:** 2025-01-04
+## Contexte Business
+
+### Probleme
+
+Le systeme d'authentification frontend actuel de CloudVault presente plusieurs problemes structurels majeurs qui impactent la maintenabilite, la scalabilite et la coherence du code:
+
+1. **Dispersion de la logique metier**: Le code auth est reparti entre 7+ fichiers sans organisation claire
+2. **Non-respect de l'ADR-002**: L'architecture reelle ne correspond pas a l'architecture decidee
+3. **Duplication des providers**: `AuthProvider` et `Providers` coexistent avec des responsabilites floues
+4. **Hooks globaux vs locaux**: Tous les hooks sont globaux alors que certains devraient etre locaux aux pages
+5. **Structure de dossiers incoherente**: Melange de patterns sans convention claire
+
+### Solution proposee
+
+Restructurer le systeme d'authentification selon l'ADR-002 en:
+- Centralisant le code core dans `apps/web/core/`
+- Localisant les composants et hooks specifiques aux pages dans `app/(route)/_components/`, `_hooks/`, `_actions/`
+- Simplifiant la chaine de providers
+- Clarifiant les responsabilites de chaque module
+
+### Valeur ajoutee
+
+- **Maintenabilite**: Code organise, facile a naviguer
+- **Onboarding**: Nouveaux developpeurs comprennent rapidement la structure
+- **Scalabilite**: Ajout de nouvelles fonctionnalites sans pollution globale
+- **Coherence**: Respect des patterns etablis dans les ADR
+
+### Metriques de succes (OKR)
+- [ ] 100% des fichiers auth suivent la convention de nommage
+- [ ] 0 duplication de code entre les modules auth
+- [ ] Temps de comprehension < 15 min pour un nouveau developpeur
+- [ ] Tous les tests existants passent apres refactoring
+
+---
+
+## Analyse de l'Existant
+
+### Structure Actuelle (Problematique)
+
+```
+apps/web/
+|-- app/
+|   |-- auth/
+|   |   |-- _actions/           # VIDE
+|   |   |-- _components/        # VIDE
+|   |   |-- _hooks/             # VIDE
+|   |   |-- callback/
+|   |   |   |-- _actions/       # VIDE
+|   |   |   |-- _components/
+|   |   |   |   +-- callback-content.tsx  # OK - local
+|   |   |   |-- _hooks/         # VIDE
+|   |   |   |-- layout.tsx
+|   |   |   +-- page.tsx
+|   |   |-- login/
+|   |   |   |-- _actions/       # VIDE
+|   |   |   |-- _components/    # VIDE (form dans components/auth)
+|   |   |   |-- _hooks/         # VIDE
+|   |   |   +-- page.tsx        # Importe depuis components/auth
+|   |   |-- register/
+|   |   |   |-- _actions/       # VIDE
+|   |   |   |-- _components/    # VIDE (form dans components/auth)
+|   |   |   |-- _hooks/         # VIDE
+|   |   |   +-- page.tsx        # Importe depuis components/auth
+|   |   +-- layout.tsx
+|   |-- dashboard/
+|   |   |-- _actions/           # VIDE
+|   |   |-- _components/        # VIDE
+|   |   |-- _hooks/             # VIDE
+|   |   |-- layout.tsx          # Utilise AuthGuard
+|   |   +-- page.tsx
+|   +-- layout.tsx              # Root layout avec providers dupliques
+|
+|-- components/
+|   |-- auth/                   # PROBLEME: Composants globaux pour pages specifiques
+|   |   |-- auth-card.tsx       # OK - reutilisable
+|   |   |-- auth-guard.tsx      # OK - guard global
+|   |   |-- divider-with-text.tsx  # OK - reutilisable
+|   |   |-- google-button.tsx   # OK - reutilisable
+|   |   |-- index.ts
+|   |   |-- login-form.tsx      # PROBLEME: Devrait etre local a login/
+|   |   +-- register-form.tsx   # PROBLEME: Devrait etre local a register/
+|   |-- providers/
+|   |   |-- auth-provider.tsx   # OK mais mal place
+|   |   +-- index.tsx           # Providers wrapper (duplique avec layout)
+|   +-- dashboard/
+|       +-- nav.tsx
+|
+|-- core/
+|   +-- providers/
+|       |-- reactQuery.tsx      # OK
+|       +-- theme-provider.tsx  # Duplique avec components/common
+|
+|-- hooks/
+|   |-- use-auth.ts             # PROBLEME: Hook global trop gros (147 lignes)
+|   +-- use-mobile.ts           # OK
+|
+|-- lib/
+|   |-- api/
+|   |   |-- auth.ts             # OK - fonctions API auth
+|   |   +-- client.ts           # OK - client ky configure
+|   |-- stores/
+|   |   +-- auth.ts             # OK - Zustand store
+|   +-- utils.ts
+|
++-- proxy.ts                    # OK - middleware Next.js
+```
+
+### Problemes Identifies
+
+| # | Probleme | Localisation | Impact | Priorite |
+|---|----------|--------------|--------|----------|
+| 1 | LoginForm dans components/auth au lieu de login/_components | `components/auth/login-form.tsx` | Confusion, non-scalable | High |
+| 2 | RegisterForm dans components/auth au lieu de register/_components | `components/auth/register-form.tsx` | Confusion, non-scalable | High |
+| 3 | Hook use-auth.ts trop gros (6 hooks en 1) | `hooks/use-auth.ts` | Difficile a maintenir | High |
+| 4 | Providers dupliques (layout.tsx vs providers/index.tsx) | `app/layout.tsx`, `providers/index.tsx` | Code mort, confusion | Medium |
+| 5 | theme-provider duplique | `core/providers/`, `components/common/` | Duplication | Medium |
+| 6 | Dossiers _actions, _hooks, _components vides | Toutes les routes auth | Structure fantome | Low |
+| 7 | API et stores dans lib/ au lieu de core/ | `lib/api/`, `lib/stores/` | Non-conforme ADR | Medium |
+
+### Dependances Actuelles
+
+```
+                    +------------------+
+                    |   app/layout.tsx |
+                    +--------+---------+
+                             |
+              +--------------+--------------+
+              |              |              |
+              v              v              v
+    +----------------+ +-------------+ +----------------+
+    |ReactQueryProvider| |ThemeProvider| |AuthProvider   |
+    +----------------+ +-------------+ +----------------+
+                                              |
+                                              v
+                                    +------------------+
+                                    | useAuthStore     |
+                                    | (Zustand)        |
+                                    +--------+---------+
+                                             |
+                    +------------------------+------------------------+
+                    |                        |                        |
+                    v                        v                        v
+           +---------------+        +---------------+        +---------------+
+           | AuthGuard     |        | use-auth.ts   |        | api/client.ts |
+           | (components)  |        | (hooks/)      |        | (lib/)        |
+           +-------+-------+        +-------+-------+        +-------+-------+
+                   |                        |                        |
+                   |                        v                        |
+                   |               +---------------+                 |
+                   +-------------->| LoginForm     |<----------------+
+                                   | RegisterForm  |
+                                   +---------------+
+```
+
+---
+
+## User Stories
+
+### Story 1: Restructurer les composants de formulaires
+
+**En tant que** developpeur CloudVault
+**Je veux** que les formulaires login et register soient localises dans leurs routes respectives
+**Afin de** respecter le pattern Next.js App Router et faciliter la maintenance
+
+**Criteres d'acceptation**:
+- [ ] `login-form.tsx` deplace vers `app/auth/login/_components/login-form.tsx`
+- [ ] `register-form.tsx` deplace vers `app/auth/register/_components/register-form.tsx`
+- [ ] Les imports dans les pages sont mis a jour
+- [ ] L'ancien fichier dans `components/auth/` est supprime
+- [ ] Le barrel export `components/auth/index.ts` est mis a jour
+
+### Story 2: Decomposer le hook use-auth
+
+**En tant que** developpeur CloudVault
+**Je veux** que les hooks d'authentification soient separes par responsabilite
+**Afin de** pouvoir les importer individuellement et reduire le bundle
+
+**Criteres d'acceptation**:
+- [ ] `useLogin` dans `app/auth/login/_hooks/use-login.ts`
+- [ ] `useRegister` dans `app/auth/register/_hooks/use-register.ts`
+- [ ] `useLogout` dans `core/auth/hooks/use-logout.ts` (global car utilise partout)
+- [ ] `useProfile` dans `core/auth/hooks/use-profile.ts` (global)
+- [ ] `useAuth` facade conservee dans `hooks/` pour compatibilite
+- [ ] Chaque hook < 50 lignes
+
+### Story 3: Centraliser le core auth
+
+**En tant que** developpeur CloudVault
+**Je veux** que le code core d'authentification soit dans `core/auth/`
+**Afin de** avoir une separation claire entre core et features
+
+**Criteres d'acceptation**:
+- [ ] `core/auth/api/client.ts` - client ky configure
+- [ ] `core/auth/api/auth.ts` - fonctions API
+- [ ] `core/auth/stores/auth.ts` - Zustand store
+- [ ] `core/auth/hooks/` - hooks globaux (useAuth, useLogout, useProfile)
+- [ ] `core/auth/components/auth-guard.tsx` - composant guard
+- [ ] Anciens fichiers dans `lib/` supprimes
+
+### Story 4: Nettoyer les providers
+
+**En tant que** developpeur CloudVault
+**Je veux** une seule source de verite pour les providers
+**Afin de** eviter la duplication et la confusion
+
+**Criteres d'acceptation**:
+- [ ] `core/providers/index.tsx` comme unique point d'entree
+- [ ] `components/providers/` supprime
+- [ ] `components/common/theme-provider.tsx` supprime (utiliser next-themes directement)
+- [ ] `app/layout.tsx` importe depuis `core/providers`
+
+### Story 5: Nettoyer les dossiers vides
+
+**En tant que** developpeur CloudVault
+**Je veux** que les dossiers vides soient supprimes ou utilises
+**Afin de** avoir une structure propre
+
+**Criteres d'acceptation**:
+- [ ] Supprimer tous les dossiers `_actions/`, `_hooks/`, `_components/` vides
+- [ ] Ou les utiliser si du code local doit y etre place
+
+---
+
+## Edge Cases Identifies
+
+| # | Cas | Comportement attendu | Priorite |
+|---|-----|---------------------|----------|
+| 1 | Import circulaire entre core/auth et hooks/ | Utiliser des imports dynamiques ou reorganiser | Must |
+| 2 | SSR: Zustand hydration avant React Query | AuthProvider gere la sequence correctement | Must |
+| 3 | Code splitting: bundle auth charge pour guest | Lazy load des formulaires | Should |
+| 4 | Migration: anciens imports cassent | Conserver alias temporaires avec deprecation | Should |
+| 5 | Tests: chemins hardcodes | Mettre a jour les paths dans les tests | Must |
+
+---
+
+## Considerations Securite / RGPD
+
+- [ ] Donnees personnelles impliquees: Non (restructuration seulement)
+- [ ] Audit logging requis: Non
+- [ ] Permissions RBAC: Non applicable
+
+**Note securite**: La restructuration ne modifie pas la logique de securite. Le stockage des tokens (access token en memoire, refresh token en httpOnly cookie) reste inchange.
+
+---
+
+## Impact Technique (estimation)
+
+### Modules impactes
+
+- `apps/web/app/auth/`: Pages login, register, callback
+- `apps/web/app/dashboard/`: Layout avec AuthGuard
+- `apps/web/components/auth/`: A decomposer
+- `apps/web/lib/api/`: A deplacer vers core/
+- `apps/web/lib/stores/`: A deplacer vers core/
+- `apps/web/hooks/`: A refactorer
+- `apps/web/core/`: A enrichir
+
+### Breaking changes
+
+- [ ] Oui
+- Si oui: Imports depuis `components/auth/login-form` et `register-form` casseront
+- Mitigation: Phase de deprecation avec re-exports
+
+### Migration donnees
+
+- [ ] Non requise (pas de changement backend/BDD)
+
+---
+
+## Structure Cible
+
+```
+apps/web/
+|-- app/
+|   |-- auth/
+|   |   |-- layout.tsx                    # Layout auth (centre, pas de nav)
+|   |   |-- callback/
+|   |   |   |-- _components/
+|   |   |   |   +-- callback-content.tsx  # INCHANGE
+|   |   |   +-- page.tsx
+|   |   |-- login/
+|   |   |   |-- _components/
+|   |   |   |   +-- login-form.tsx        # DEPLACE de components/auth
+|   |   |   |-- _hooks/
+|   |   |   |   +-- use-login.ts          # EXTRAIT de hooks/use-auth
+|   |   |   +-- page.tsx
+|   |   +-- register/
+|   |       |-- _components/
+|   |       |   +-- register-form.tsx     # DEPLACE de components/auth
+|   |       |-- _hooks/
+|   |       |   +-- use-register.ts       # EXTRAIT de hooks/use-auth
+|   |       +-- page.tsx
+|   |-- dashboard/
+|   |   |-- layout.tsx                    # AuthGuard depuis core/
+|   |   +-- page.tsx
+|   +-- layout.tsx                        # Providers depuis core/
+|
+|-- components/
+|   |-- auth/                             # Composants REUTILISABLES seulement
+|   |   |-- auth-card.tsx                 # OK
+|   |   |-- divider-with-text.tsx         # OK
+|   |   |-- google-button.tsx             # OK
+|   |   +-- index.ts                      # Mis a jour
+|   +-- ui/                               # shadcn/ui INCHANGE
+|
+|-- core/
+|   |-- auth/
+|   |   |-- api/
+|   |   |   |-- client.ts                 # DEPLACE de lib/api
+|   |   |   +-- auth.ts                   # DEPLACE de lib/api
+|   |   |-- stores/
+|   |   |   +-- auth.ts                   # DEPLACE de lib/stores
+|   |   |-- hooks/
+|   |   |   |-- use-auth.ts               # Facade simplifiee
+|   |   |   |-- use-logout.ts             # EXTRAIT
+|   |   |   +-- use-profile.ts            # EXTRAIT
+|   |   +-- components/
+|   |       +-- auth-guard.tsx            # DEPLACE de components/auth
+|   +-- providers/
+|       |-- index.tsx                     # Unique point d'entree
+|       |-- react-query.tsx               # INCHANGE
+|       +-- auth-provider.tsx             # DEPLACE de components/providers
+|
+|-- hooks/
+|   |-- use-auth.ts                       # Re-export de core/auth/hooks (compat)
+|   +-- use-mobile.ts                     # INCHANGE
+|
++-- proxy.ts                              # INCHANGE
+```
+
+### Dependances entre composants (apres restructuration)
+
+```
+                    +------------------+
+                    |   app/layout.tsx |
+                    +--------+---------+
+                             |
+                             v
+                    +------------------+
+                    | core/providers/  |
+                    | index.tsx        |
+                    +--------+---------+
+                             |
+              +--------------+--------------+
+              |              |              |
+              v              v              v
+    +----------------+ +-------------+ +----------------+
+    | ReactQuery     | | ThemeProvider| | AuthProvider  |
+    +----------------+ +-------------+ +----------------+
+                                              |
+                                              v
+                                    +------------------+
+                                    | core/auth/stores/|
+                                    | auth.ts          |
+                                    +--------+---------+
+                                             |
+                    +------------------------+
+                    |                        |
+                    v                        v
+           +---------------+        +---------------+
+           | core/auth/    |        | core/auth/api/|
+           | components/   |        | client.ts     |
+           | auth-guard.tsx|        +-------+-------+
+           +---------------+                |
+                                            v
+                               +------------------------+
+                               | app/auth/login/        |
+                               | _hooks/use-login.ts    |
+                               | _components/login-form |
+                               +------------------------+
+```
+
+---
+
+## Plan d'Implementation
+
+### Phase 1: Preparation (0.5 jour)
+1. Creer la structure de dossiers dans `core/auth/`
+2. Ajouter les dossiers `_components/` et `_hooks/` dans login/ et register/
+
+### Phase 2: Migration Core (1 jour)
+1. Deplacer `lib/api/client.ts` vers `core/auth/api/client.ts`
+2. Deplacer `lib/api/auth.ts` vers `core/auth/api/auth.ts`
+3. Deplacer `lib/stores/auth.ts` vers `core/auth/stores/auth.ts`
+4. Mettre a jour tous les imports
+
+### Phase 3: Decomposition Hooks (1 jour)
+1. Extraire `useLogin` vers `app/auth/login/_hooks/use-login.ts`
+2. Extraire `useRegister` vers `app/auth/register/_hooks/use-register.ts`
+3. Extraire `useLogout` vers `core/auth/hooks/use-logout.ts`
+4. Extraire `useProfile` vers `core/auth/hooks/use-profile.ts`
+5. Simplifier `hooks/use-auth.ts` en facade
+
+### Phase 4: Migration Composants (1 jour)
+1. Deplacer `login-form.tsx` vers `app/auth/login/_components/`
+2. Deplacer `register-form.tsx` vers `app/auth/register/_components/`
+3. Deplacer `auth-guard.tsx` vers `core/auth/components/`
+4. Mettre a jour les imports dans les pages
+
+### Phase 5: Nettoyage (0.5 jour)
+1. Supprimer les anciens fichiers
+2. Nettoyer `components/auth/index.ts`
+3. Supprimer `components/providers/`
+4. Supprimer dossiers vides inutilises
+5. Mettre a jour `app/layout.tsx`
+
+### Phase 6: Validation (1 jour)
+1. Verifier que l'application demarre
+2. Tester le flow login complet
+3. Tester le flow register complet
+4. Tester le flow OAuth
+5. Tester la protection des routes
+6. Verifier le build production
+
+---
+
+## Questions Bloquantes
+
+Aucune question bloquante identifiee. La restructuration peut commencer.
+
+---
+
+## References
+
+- ADR-002: `/docs/claude/decisions/ADR-002-frontend-auth-architecture.md` (Token storage, state management)
+- ADR-003: `/docs/claude/decisions/ADR-003-frontend-auth-restructuring.md` (Code restructuring)
+- Architecture: `/docs/claude/context/architecture.md`
+- Types partages: `/packages/types/src/index.ts`
+
+---
+
+**Prochaine etape**:
+> Use the implementer agent on "frontend-auth-restructure"
+
+**Questions bloquantes**: 0
