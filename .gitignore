@@ -46,13 +46,22 @@ tmp/
 temp/
 *.tmp
 !/.mcp.json
-
-# AI config - Commit .claude/ but ignore personal/sensitive files
-.claude/settings.local.json
-.claude/logs/
-.claude/oauth-cache/
-.claude/transcripts/
-.codex/
-
-# MCP config (contains tokens)
+# Environment & Secrets
+.env
+.env.*
 .mcp.json
+
+# Agent internal state
+.claude/
+.agentvibes/
+.codex/
+.agent/
+.agents/
+.gemini/
+.windsurf/
+_bmad/
+.aped/
+
+# CLAUDE.md context files (keep only root CLAUDE.md)
+**/CLAUDE.md
+!/CLAUDE.md
