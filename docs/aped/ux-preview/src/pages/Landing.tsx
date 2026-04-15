@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Shield, ArrowRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { ThemeToggle } from '../components/ui/theme-toggle';
 import { FallingPattern } from '../components/ui/falling-pattern';
 import { TextShimmer } from '../components/ui/text-shimmer';
 import AgentPlan from '../components/ui/agent-plan';
@@ -19,6 +20,7 @@ export function Landing() {
             <span className="text-sm font-semibold tracking-tight">CloudVault</span>
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle className="scale-75" />
             <Link to="/auth/login">
               <Button variant="ghost" size="sm">Sign in</Button>
             </Link>

@@ -10,7 +10,9 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { ThemeToggle } from '../components/ui/theme-toggle';
 import { FallingPattern } from '../components/ui/falling-pattern';
+import { Breadcrumb } from '../components/ui/breadcrumb';
 import { currentUser } from '../data/mock';
 
 const navItems = [
@@ -24,39 +26,46 @@ export function AppLayout() {
   const location = useLocation();
 
   return (
-    <div className="min-h-dvh flex flex-col lg:flex-row bg-[var(--background)]">
+    <div className="h-dvh flex flex-col lg:flex-row bg-[var(--background)] overflow-hidden">
       <a href="#main-content" className="skip-to-main">
         Skip to main content
       </a>
 
-      {/* Mobile header */}
-      <header className="lg:hidden flex items-center justify-between px-4 h-12 border-b border-[var(--border)] relative z-50 bg-[var(--background)]">
+      {/* ─── Mobile header (fixed top) ─── */}
+      <header className="lg:hidden flex-shrink-0 flex items-center justify-between px-4 h-12 border-b border-[var(--border)] z-50 bg-[var(--background)]">
         <div className="flex items-center gap-2">
           <Shield className="h-4 w-4" />
           <span className="text-xs font-semibold tracking-tight">CloudVault</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Toggle menu">
-          {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle className="scale-75 origin-right" />
+          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Toggle menu">
+            {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </Button>
+        </div>
       </header>
 
-      {/* Sidebar */}
+      {/* ─── Sidebar: fixed height, never scrolls ─── */}
       <aside
         className={`
           fixed inset-y-0 left-0 z-40 w-56 bg-[var(--background)] border-r border-[var(--border)]
+          flex flex-col h-dvh
           transform transition-transform duration-200 ease-out
-          lg:relative lg:translate-x-0 lg:flex lg:flex-col
+          lg:relative lg:translate-x-0
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
-        {/* Logo */}
-        <div className="hidden lg:flex items-center gap-2 px-5 h-12 border-b border-[var(--border)]">
-          <Shield className="h-4 w-4 text-emerald-500" />
-          <span className="text-xs font-semibold tracking-tight">CloudVault</span>
+        {/* Logo — pinned top */}
+        <div className="flex-shrink-0 hidden lg:flex items-center justify-between px-5 h-12 border-b border-[var(--border)]">
+          <div className="flex items-center gap-2">
+            <Shield className="h-4 w-4 text-emerald-500" />
+            <span className="text-xs font-semibold tracking-tight">CloudVault</span>
+          </div>
+          <ThemeToggle className="scale-75 origin-right" />
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 py-3 px-2" aria-label="Main navigation">
+        {/* Navigation — fills middle, scrolls only if many items */}
+        <nav className="flex-1 min-h-0 overflow-y-auto py-3 px-2" aria-label="Main navigation">
           <ul className="flex flex-col gap-0.5">
             {navItems.map(({ to, icon: Icon, label }) => (
               <li key={to}>
@@ -80,8 +89,8 @@ export function AppLayout() {
           </ul>
         </nav>
 
-        {/* User */}
-        <div className="p-2 border-t border-[var(--border)]">
+        {/* User — pinned bottom */}
+        <div className="flex-shrink-0 p-2 border-t border-[var(--border)]">
           <div className="flex items-center gap-2.5 px-2.5 py-2">
             <div className="h-6 w-6 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] font-medium text-white flex-shrink-0 relative overflow-hidden">
               <span className="relative z-10">{currentUser.name.charAt(0)}</span>
@@ -107,16 +116,23 @@ export function AppLayout() {
         />
       )}
 
-      {/* Main content */}
-      <main id="main-content" className="flex-1 overflow-auto relative" tabIndex={-1}>
+      {/* ─── Main content: only this zone scrolls ─── */}
+      <main id="main-content" className="flex-1 min-h-0 overflow-y-auto relative" tabIndex={-1}>
         <FallingPattern
           color="#10b981"
           speed={0.6}
           dotSize={1}
           gap={8}
-          className="absolute inset-0 h-full w-full opacity-30 pointer-events-none [mask-image:radial-gradient(ellipse_at_top_right,black,transparent_60%)] z-0"
+          className="fixed inset-0 h-full w-full opacity-30 pointer-events-none [mask-image:radial-gradient(ellipse_at_top_right,black,transparent_60%)] z-0"
         />
-        <div className="relative z-10 h-full w-full">
+
+        {/* Breadcrumb bar — same h-12 as sidebar header for alignment */}
+        <div className="sticky top-0 z-20 bg-[var(--background)]/80 backdrop-blur-sm border-b border-[var(--border)] px-6 h-12 flex items-center">
+          <Breadcrumb />
+        </div>
+
+        {/* Page content */}
+        <div className="relative z-10">
           <Outlet />
         </div>
       </main>

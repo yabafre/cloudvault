@@ -13,6 +13,14 @@ export const storageStats = {
   lastUploadAt: '2026-03-19T14:22:00Z',
 };
 
+// Alternate stats for quota warning demo (>80% full)
+export const storageStatsHigh = {
+  totalFiles: 412,
+  totalSize: 4_617_089_843, // ~4.3 GB (86% of 5 GB)
+  maxSize: 5_368_709_120,
+  lastUploadAt: '2026-04-12T09:15:00Z',
+};
+
 export interface FileItem {
   id: string;
   name: string;
