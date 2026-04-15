@@ -105,7 +105,8 @@ export function FallingPattern({
 
           // Map to alpha: contour peaks = bright, valleys = dim
           // Shift range from [-1,1] to alpha range
-          const alpha = 0.08 + (contour * 0.5 + 0.5) * 0.30;
+          // Range 0.12–0.55: visible on light backgrounds, subtle on dark
+          const alpha = 0.12 + (contour * 0.5 + 0.5) * 0.43;
 
           setDot(px, py, alpha);
         }

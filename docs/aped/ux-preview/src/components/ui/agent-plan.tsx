@@ -127,18 +127,18 @@ export default function AgentPlan() {
 
   const taskVariants = {
     hidden: { opacity: 0, y: prefersReducedMotion ? 0 : -5 },
-    visible: { opacity: 1, y: 0, transition: { type: prefersReducedMotion ? "tween" : "spring", stiffness: 500, damping: 30 } },
+    visible: { opacity: 1, y: 0, transition: { type: (prefersReducedMotion ? "tween" : "spring") as "tween" | "spring", stiffness: 500, damping: 30 } },
   };
 
   const subtaskListVariants = {
     hidden: { opacity: 0, height: 0, overflow: "hidden" as const },
-    visible: { height: "auto", opacity: 1, overflow: "visible" as const, transition: { duration: 0.25, staggerChildren: 0.05, when: "beforeChildren" as const, ease: [0.2, 0.65, 0.3, 0.9] } },
+    visible: { height: "auto", opacity: 1, overflow: "visible" as const, transition: { duration: 0.25, staggerChildren: 0.05, when: "beforeChildren" as const, ease: [0.2, 0.65, 0.3, 0.9] as [number, number, number, number] } },
     exit: { height: 0, opacity: 0, overflow: "hidden" as const, transition: { duration: 0.2 } },
   };
 
   const subtaskVariants = {
     hidden: { opacity: 0, x: prefersReducedMotion ? 0 : -10 },
-    visible: { opacity: 1, x: 0, transition: { type: prefersReducedMotion ? "tween" : "spring", stiffness: 500, damping: 25 } },
+    visible: { opacity: 1, x: 0, transition: { type: (prefersReducedMotion ? "tween" : "spring") as "tween" | "spring", stiffness: 500, damping: 25 } },
   };
 
   const StatusIcon = ({ status, size = "h-4 w-4" }: { status: string; size?: string }) => {
