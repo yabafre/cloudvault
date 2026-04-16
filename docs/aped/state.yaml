@@ -1,6 +1,6 @@
 # APED Pipeline State
 pipeline:
-  current_phase: "epics"
+  current_phase: "sprint"
   phases:
     analyze:
       status: "done"
