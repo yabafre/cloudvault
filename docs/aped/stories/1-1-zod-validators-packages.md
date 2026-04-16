@@ -1,7 +1,7 @@
 # Story: 1-1-zod-validators-packages — Create @cloudvault/zod and @cloudvault/validators packages
 
 **Epic:** 1 — Platform Foundation & Contract Layer
-**Status:** review
+**Status:** done
 **Ticket:** [KON-82](https://linear.app/koni/issue/KON-82)
 **Branch:** `feature/kon-82-1-1-zod-validators-packages`
 **Size:** S (1 pt)

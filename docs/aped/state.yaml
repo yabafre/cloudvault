@@ -94,7 +94,7 @@ sprint:
   ticket_team: "Koni"
   stories:
     1-1-zod-validators-packages:
-      status: review
+      status: done
       ticket: "KON-82"
       file: "docs/aped/stories/1-1-zod-validators-packages.md"
     1-2-contract-package-scaffold:

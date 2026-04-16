@@ -9,6 +9,6 @@
     "lint": "echo \"No lint configured\""
   },
   "dependencies": {
-    "zod": "^4.3.4"
+    "zod": "4.3.4"
   }
 }
