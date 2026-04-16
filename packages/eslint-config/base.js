@@ -23,4 +23,17 @@ module.exports = {
     'node_modules/',
     '.husky/',
   ],
+  rules: {
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: [
+          {
+            name: 'zod',
+            message: 'Use @cloudvault/zod instead — zod is version-locked.',
+          },
+        ],
+      },
+    ],
+  },
 };

@@ -1,6 +1,6 @@
 'use server';
 
-import { z } from 'zod';
+import { z } from '@cloudvault/zod';
 import { cookies } from 'next/headers';
 import {
   publicProcedure,

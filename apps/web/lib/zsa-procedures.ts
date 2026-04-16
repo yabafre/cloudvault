@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { createServerActionProcedure } from 'zsa';
-import { z } from 'zod';
+import { z } from '@cloudvault/zod';
 import type { User } from '@cloudvault/types';
 
 const API_URL = process.env.API_URL || 'http://localhost:4000';

@@ -20,7 +20,7 @@ module.exports = {
     node: true,
     browser: true,
   },
-  plugins: ["only-warn"],
+  plugins: [],
   settings: {
     "import/resolver": {
       typescript: {
@@ -34,4 +34,17 @@ module.exports = {
     "node_modules/",
   ],
   overrides: [{ files: ["*.js?(x)", "*.ts?(x)"] }],
+  rules: {
+    "no-restricted-imports": [
+      "error",
+      {
+        paths: [
+          {
+            name: "zod",
+            message: "Use @cloudvault/zod instead — zod is version-locked.",
+          },
+        ],
+      },
+    ],
+  },
 };

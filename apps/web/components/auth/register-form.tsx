@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import { z } from '@cloudvault/zod'
 import { Eye, EyeOff, Check, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
