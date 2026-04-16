@@ -98,8 +98,9 @@ sprint:
       ticket: "KON-82"
       file: "docs/aped/stories/1-1-zod-validators-packages.md"
     1-2-contract-package-scaffold:
-      status: pending
+      status: in-progress
       ticket: "KON-83"
+      file: "docs/aped/stories/1-2-contract-package-scaffold.md"
     1-3-orpc-nest-adapter:
       status: pending
       ticket: "KON-84"
