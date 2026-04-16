@@ -47,7 +47,7 @@ Client (Next.js) → ky HTTP client → NestJS API (port 4000) → Prisma ORM �
 
 ```
 Registration/Login:
-  Client form → zsa server action → NestJS /auth/* → bcrypt validation → JWT + Refresh token → httpOnly cookie
+  Client form → zapaction → NestJS /auth/* oRPC → argon2id validation (@node-rs/argon2) → JWT + Refresh token → httpOnly cookie
 
 Google OAuth:
   Client → /auth/google → Google consent → /auth/google/callback → JWT tokens → redirect to frontend /auth/callback
@@ -130,7 +130,7 @@ Route Protection:
 | @nestjs/platform-express | ^11.0.1 | Express HTTP adapter | Minor update available |
 | @nestjs/swagger | ^11.2.3 | API documentation | Minor update available |
 | @prisma/client | ^6.0.0 | Database ORM client | OK |
-| bcrypt | ^6.0.0 | Password hashing | OK |
+| @node-rs/argon2 | latest | Password hashing (argon2id) — **replaces bcrypt**, migration in Epic 2 story 2-1b | TO INSTALL |
 | class-transformer | ^0.5.1 | DTO transformation | OK |
 | class-validator | ^0.14.3 | DTO validation | OK |
 | cookie-parser | ^1.4.7 | Cookie middleware | OK |
