@@ -29,6 +29,12 @@ importers:
 
   apps/api:
     dependencies:
+      '@cloudvault/validators':
+        specifier: workspace:*
+        version: link:../../packages/validators
+      '@cloudvault/zod':
+        specifier: workspace:*
+        version: link:../../packages/zod
       '@nestjs/common':
         specifier: ^11.0.1
         version: 11.1.11(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -177,6 +183,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@cloudvault/validators':
+        specifier: workspace:*
+        version: link:../../packages/validators
+      '@cloudvault/zod':
+        specifier: workspace:*
+        version: link:../../packages/zod
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.70.0(react@19.2.3))
@@ -318,9 +330,6 @@ importers:
       vaul:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      zod:
-        specifier: ^4.3.4
-        version: 4.3.4
       zsa:
         specifier: ^0.6.0
         version: 0.6.0(zod@4.3.4)
@@ -434,6 +443,18 @@ importers:
   packages/types: {}
 
   packages/typescript-config: {}
+
+  packages/validators:
+    dependencies:
+      '@cloudvault/zod':
+        specifier: workspace:*
+        version: link:../zod
+
+  packages/zod:
+    dependencies:
+      zod:
+        specifier: ^4.3.4
+        version: 4.3.4
 
 packages:
 

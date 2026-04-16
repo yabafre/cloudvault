@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from '@cloudvault/zod'
 
 // Schema de login
 export const loginSchema = z.object({

@@ -1,0 +1,14 @@
+{
+  "name": "@cloudvault/validators",
+  "version": "1.0.0",
+  "description": "Shared Zod validators organized per feature",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "echo \"No lint configured\""
+  },
+  "dependencies": {
+    "@cloudvault/zod": "workspace:*"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@cloudvault/zod",
+  "version": "1.0.0",
+  "description": "Version-locked Zod re-export — the only package allowed to import zod directly",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "echo \"No lint configured\""
+  },
+  "dependencies": {
+    "zod": "^4.3.4"
+  }
+}
