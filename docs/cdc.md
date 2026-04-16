@@ -124,7 +124,7 @@
 - Auth: Passport JWT
 - Validation: class-validator
 - AWS SDK: @aws-sdk/client-s3
-- Hash: bcrypt
+- Hash: argon2id (`@node-rs/argon2`)
 
 **Frontend (apps/web)**
 - Framework: Next.js 16 (App Router)
@@ -153,7 +153,7 @@
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
-  password  String   // hash bcrypt
+  password  String   // hash argon2id
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -219,7 +219,7 @@ model File {
 - Transmission via header `Authorization: Bearer <token>`
 
 **Mots de passe:**
-- Hash: bcrypt (salt rounds: 10)
+- Hash: argon2id via `@node-rs/argon2` (OWASP defaults: memoryCost ≥ 19 MiB, timeCost ≥ 2, parallelism 1)
 - Validation: min 8 caractères
 
 **S3:**

@@ -19,7 +19,10 @@ function extractRefreshToken(req: Request): string | null {
 }
 
 @Injectable()
-export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
+export class JwtRefreshStrategy extends PassportStrategy(
+  Strategy,
+  'jwt-refresh',
+) {
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
@@ -32,7 +35,10 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
     });
   }
 
-  async validate(req: Request, payload: { sub: string; email: string; token: string }) {
+  async validate(
+    req: Request,
+    payload: { sub: string; email: string; token: string },
+  ) {
     // The payload.token contains the UUID stored in the database
     const tokenUuid = payload.token;
 

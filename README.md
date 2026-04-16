@@ -156,7 +156,7 @@ pnpm dev
 ## 🔐 Sécurité
 
 - Authentification JWT
-- Hash bcrypt pour mots de passe
+- Hash argon2id (`@node-rs/argon2`) pour mots de passe
 - URL S3 pré-signées (expiration 15min)
 - CORS configuré
 - Variables d'environnement sécurisées

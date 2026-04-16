@@ -217,7 +217,7 @@ FR46: System can return appropriate error responses with structured error messag
 
 ### Security
 
-- The system shall hash all passwords using bcrypt with a minimum cost factor of 10
+- The system shall hash all passwords using argon2id (via `@node-rs/argon2`) with OWASP-recommended parameters (memoryCost ≥ 19 MiB, timeCost ≥ 2, parallelism 1)
 - The system shall encrypt all data in transit using TLS 1.2 or higher
 - The system shall encrypt all stored files at rest using AES-256 server-side encryption
 - The system shall enforce CORS restrictions allowing only the frontend origin domain
