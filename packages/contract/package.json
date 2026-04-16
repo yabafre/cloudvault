@@ -1,0 +1,16 @@
+{
+  "name": "@cloudvault/contract",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "echo \"No lint configured\""
+  },
+  "dependencies": {
+    "@orpc/contract": "^1.4.0",
+    "@cloudvault/zod": "workspace:*",
+    "@cloudvault/validators": "workspace:*",
+    "@cloudvault/types": "workspace:*"
+  }
+}
