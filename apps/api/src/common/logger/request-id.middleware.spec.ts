@@ -102,7 +102,7 @@ describe('RequestIdMiddleware', () => {
     ];
     for (const req of cases) {
       const n = jest.fn();
-      middleware.use(req as Request, buildRes(), n);
+      middleware.use(req as Request & { id?: string }, buildRes(), n);
       expect(n).toHaveBeenCalledTimes(1);
     }
   });
