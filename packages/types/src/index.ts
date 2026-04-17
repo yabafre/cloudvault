@@ -1,41 +1,12 @@
-// ============================================================================
-// User Types
-// ============================================================================
-
-export type AuthProvider = 'LOCAL' | 'GOOGLE';
-
-export interface User {
-  id: string;
-  email: string;
-  name: string | null;
-  avatar: string | null;
-  provider: AuthProvider;
-  emailVerified: boolean;
-  createdAt: string;
-  updatedAt?: string;
-}
+// Feature-scoped re-exports
+export * from './common';
+export * from './auth';
+export * from './files';
+export * from './profile';
+export * from './dashboard';
 
 // ============================================================================
-// File Types
-// ============================================================================
-
-export interface File {
-  id: string;
-  userId: string;
-  filename: string;
-  originalName: string;
-  mimeType: string;
-  size: number;
-  s3Key: string;
-  s3Url: string;
-  thumbnailKey?: string;
-  thumbnailUrl?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// ============================================================================
-// Auth Types
+// Legacy types — backward compatibility (remove in story 2-1)
 // ============================================================================
 
 export interface LoginDto {
@@ -49,25 +20,9 @@ export interface RegisterDto {
   name?: string;
 }
 
-export interface Tokens {
-  accessToken: string;
-  refreshToken: string;
-}
-
-export interface AuthResponse {
-  user: User;
-  tokens: Tokens;
-}
-
 export interface RefreshTokenDto {
   refreshToken: string;
 }
-
-export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
-
-// ============================================================================
-// API Response Types
-// ============================================================================
 
 export interface ApiErrorResponse {
   statusCode: number;
@@ -85,4 +40,22 @@ export interface PaginationMeta {
 export interface PaginatedResponse<T> {
   data: T[];
   meta: PaginationMeta;
+}
+
+/**
+ * @deprecated Use FileMetadata from '@cloudvault/types/files' instead
+ */
+export interface File {
+  id: string;
+  userId: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  s3Key: string;
+  s3Url: string;
+  thumbnailKey?: string;
+  thumbnailUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

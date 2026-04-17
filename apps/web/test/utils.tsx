@@ -1,5 +1,5 @@
 import React, { ReactElement, ReactNode } from 'react';
-import { render, RenderOptions } from '@testing-library/react';
+import { render, RenderOptions, RenderResult } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { User } from '@cloudvault/types';
 
@@ -45,7 +45,7 @@ export function createWrapper(): React.FC<WrapperProps> {
 function customRender(
   ui: ReactElement,
   options?: Omit<RenderOptions, 'wrapper'>,
-) {
+): RenderResult {
   const testQueryClient = createTestQueryClient();
 
   const AllProviders: React.FC<WrapperProps> = ({ children }) => (

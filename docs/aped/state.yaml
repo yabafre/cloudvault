@@ -1,6 +1,6 @@
 # APED Pipeline State
 pipeline:
-  current_phase: "epics"
+  current_phase: "sprint"
   phases:
     analyze:
       status: "done"
@@ -92,110 +92,182 @@ sprint:
   ticket_system: "linear"
   ticket_project: "CloudVault"
   ticket_team: "Koni"
+  active_epic: 1
   stories:
     1-1-zod-validators-packages:
       status: done
       ticket: "KON-82"
       file: "docs/aped/stories/1-1-zod-validators-packages.md"
+      depends_on: []
+      worktree: null
     1-2-contract-package-scaffold:
-      status: pending
+      status: done
       ticket: "KON-83"
+      file: "docs/aped/stories/1-2-contract-package-scaffold.md"
+      depends_on: ["1-1-zod-validators-packages"]
+      worktree: null
     1-3-orpc-nest-adapter:
       status: pending
       ticket: "KON-84"
+      depends_on: ["1-2-contract-package-scaffold"]
+      worktree: null
     1-4-prisma-schema-folder-refactor:
       status: pending
       ticket: "KON-85"
+      depends_on: []
+      worktree: null
     1-5-logging-and-request-id:
       status: pending
       ticket: "KON-86"
+      depends_on: []
+      worktree: null
     1-6-health-endpoint:
       status: pending
       ticket: "KON-87"
+      depends_on: ["1-3-orpc-nest-adapter"]
+      worktree: null
     1-7-aws-cdk-stacks:
       status: pending
       ticket: "KON-88"
+      depends_on: []
+      worktree: null
     1-8-github-actions-ci-cd:
       status: pending
       ticket: "KON-89"
+      depends_on: []
+      worktree: null
     2-1-auth-orpc-migration:
       status: pending
       ticket: "KON-90"
+      depends_on: ["1-3-orpc-nest-adapter"]
+      worktree: null
     2-1b-argon2-password-hashing:
       status: pending
       ticket: "KON-91"
+      depends_on: []
+      worktree: null
     2-2-registration-email-password:
       status: pending
       ticket: "KON-92"
+      depends_on: ["2-1-auth-orpc-migration", "2-1b-argon2-password-hashing"]
+      worktree: null
     2-3-login-email-password:
       status: pending
       ticket: "KON-93"
+      depends_on: ["2-1-auth-orpc-migration", "2-1b-argon2-password-hashing"]
+      worktree: null
     2-4-token-refresh-flow:
       status: pending
       ticket: "KON-94"
+      depends_on: ["2-1-auth-orpc-migration"]
+      worktree: null
     2-5-google-oauth:
       status: pending
       ticket: "KON-95"
+      depends_on: ["2-1-auth-orpc-migration"]
+      worktree: null
     2-6-logout:
       status: pending
       ticket: "KON-96"
+      depends_on: ["2-1-auth-orpc-migration"]
+      worktree: null
     2-7-web-orpc-client-setup:
       status: pending
       ticket: "KON-97"
+      depends_on: ["1-2-contract-package-scaffold"]
+      worktree: null
     2-8-web-auth-forms-migration:
       status: pending
       ticket: "KON-98"
+      depends_on: ["2-7-web-orpc-client-setup", "2-2-registration-email-password", "2-3-login-email-password"]
+      worktree: null
     2-9-route-protection:
       status: pending
       ticket: "KON-99"
+      depends_on: ["2-7-web-orpc-client-setup", "2-4-token-refresh-flow"]
+      worktree: null
     3-1-profile-module-backend:
       status: pending
       ticket: "KON-100"
+      depends_on: ["1-3-orpc-nest-adapter"]
+      worktree: null
     3-2-profile-page-web:
       status: pending
       ticket: "KON-101"
+      depends_on: ["2-7-web-orpc-client-setup", "3-1-profile-module-backend"]
+      worktree: null
     3-3-app-shell-layout:
       status: pending
       ticket: "KON-102"
+      depends_on: ["2-7-web-orpc-client-setup", "2-6-logout"]
+      worktree: null
     3-4-dark-mode-toggle:
       status: pending
       ticket: "KON-103"
+      depends_on: ["3-3-app-shell-layout"]
+      worktree: null
     3-5-responsive-layouts:
       status: pending
       ticket: "KON-104"
+      depends_on: ["3-3-app-shell-layout"]
+      worktree: null
     4-1-files-module-backend:
       status: pending
       ticket: "KON-105"
+      depends_on: ["1-3-orpc-nest-adapter"]
+      worktree: null
     4-2-upload-intent-endpoint:
       status: pending
       ticket: "KON-106"
+      depends_on: ["4-1-files-module-backend"]
+      worktree: null
     4-3-upload-ui-dropzone:
       status: pending
       ticket: "KON-107"
+      depends_on: ["4-2-upload-intent-endpoint", "2-7-web-orpc-client-setup"]
+      worktree: null
     4-4-persist-file-metadata:
       status: pending
       ticket: "KON-108"
+      depends_on: ["4-1-files-module-backend", "4-2-upload-intent-endpoint"]
+      worktree: null
     4-5-thumbnail-lambda-refactor:
       status: pending
       ticket: "KON-109"
+      depends_on: ["1-7-aws-cdk-stacks", "4-1-files-module-backend"]
+      worktree: null
     4-6-thumbnail-webhook:
       status: pending
       ticket: "KON-110"
+      depends_on: ["4-4-persist-file-metadata", "4-5-thumbnail-lambda-refactor"]
+      worktree: null
     5-1-files-list-endpoint:
       status: pending
       ticket: "KON-111"
+      depends_on: ["4-1-files-module-backend", "4-4-persist-file-metadata"]
+      worktree: null
     5-2-files-grid-ui:
       status: pending
       ticket: "KON-112"
+      depends_on: ["5-1-files-list-endpoint", "3-3-app-shell-layout"]
+      worktree: null
     5-3-delete-file-endpoint:
       status: pending
       ticket: "KON-113"
+      depends_on: ["4-1-files-module-backend", "4-4-persist-file-metadata"]
+      worktree: null
     5-4-delete-confirm-ui:
       status: pending
       ticket: "KON-114"
+      depends_on: ["5-3-delete-file-endpoint", "5-2-files-grid-ui"]
+      worktree: null
     6-1-dashboard-stats-endpoint:
       status: pending
       ticket: "KON-115"
+      depends_on: ["4-1-files-module-backend", "4-4-persist-file-metadata"]
+      worktree: null
     6-2-dashboard-ui:
       status: pending
       ticket: "KON-116"
+      depends_on: ["6-1-dashboard-stats-endpoint", "5-1-files-list-endpoint", "3-3-app-shell-layout"]
+      worktree: null

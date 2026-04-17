@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "dotenv -- turbo run dev",
-    "build": "dotenv -- turbo run build",
+    "build": "NODE_ENV=production dotenv -- turbo run build",
     "start": "dotenv -- turbo run start",
     "preview": "pnpm build && pnpm start",
     "test": "dotenv -- turbo run test",
@@ -15,8 +15,8 @@
     "dev:api": "dotenv -- pnpm --filter @cloudvault/api dev",
     "dev:web": "dotenv -- pnpm --filter @cloudvault/web dev",
 
-    "build:api": "dotenv -- pnpm --filter @cloudvault/api build",
-    "build:web": "dotenv -- pnpm --filter @cloudvault/web build",
+    "build:api": "NODE_ENV=production dotenv -- pnpm --filter @cloudvault/api build",
+    "build:web": "NODE_ENV=production dotenv -- pnpm --filter @cloudvault/web build",
 
     "start:api": "dotenv -- pnpm --filter @cloudvault/api start",
     "start:web": "dotenv -- pnpm --filter @cloudvault/web start",

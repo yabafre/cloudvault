@@ -16,6 +16,16 @@ enum AuthProvider {
   GOOGLE
 }
 
+// === FILE STATUS ENUM ===
+// PENDING: upload intent issued, awaiting S3 confirmation
+// READY: file uploaded + thumbnail generated
+// FAILED: upload or thumbnail generation failed
+enum FileStatus {
+  PENDING
+  READY
+  FAILED
+}
+
 // === USER MODEL ===
 // Represents a user of the CloudVault platform
 model User {
@@ -68,11 +78,13 @@ model File {
   s3Url        String
   thumbnailKey String?
   thumbnailUrl String?
+  status       FileStatus @default(PENDING)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([userId])
   @@index([s3Key])
+  @@index([status])
   @@index([createdAt])
   @@map("files")
 }
