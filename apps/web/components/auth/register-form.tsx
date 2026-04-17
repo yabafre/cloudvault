@@ -38,7 +38,7 @@ export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { mutateAsync: register, isPending } = useRegister()
+  const { registerAsync: register, isPending } = useRegister()
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),

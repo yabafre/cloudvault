@@ -5,9 +5,10 @@ import {
   listFilesSchema,
   listFilesOutputSchema,
   deleteFileSchema,
+  successOutputSchema,
 } from '@cloudvault/validators';
 
-export const filesContract = {
+export const filesContract = oc.router({
   createUploadIntent: oc
     .route({ method: 'POST', path: '/files/upload-intent' })
     .input(uploadIntentSchema)
@@ -20,5 +21,6 @@ export const filesContract = {
 
   delete: oc
     .route({ method: 'DELETE', path: '/files/{fileId}' })
-    .input(deleteFileSchema),
-};
+    .input(deleteFileSchema)
+    .output(successOutputSchema),
+});

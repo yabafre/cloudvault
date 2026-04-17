@@ -19,6 +19,7 @@ export const listFilesOutputSchema = z.object({
   items: z.array(fileOutputSchema),
   total: z.number(),
   page: z.number(),
+  pageSize: z.number(),
   totalPages: z.number(),
 });
 

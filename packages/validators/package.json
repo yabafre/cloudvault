@@ -10,5 +10,8 @@
   },
   "dependencies": {
     "@cloudvault/zod": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
   }
 }

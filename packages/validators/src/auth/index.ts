@@ -6,3 +6,6 @@ export type { RegisterInput, RegisterOutput } from './register.schema';
 
 export { refreshSchema, refreshOutputSchema } from './refresh.schema';
 export type { RefreshInput, RefreshOutput } from './refresh.schema';
+
+export { googleCallbackSchema } from './google-callback.schema';
+export type { GoogleCallbackInput } from './google-callback.schema';

@@ -27,7 +27,7 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { mutateAsync: login, isPending } = useLogin()
+  const { loginAsync: login, isPending } = useLogin()
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),

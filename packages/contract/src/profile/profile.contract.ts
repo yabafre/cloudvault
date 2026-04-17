@@ -5,13 +5,13 @@ import {
   updateProfileOutputSchema,
 } from '@cloudvault/validators';
 
-export const profileContract = {
+export const profileContract = oc.router({
   me: oc
     .route({ method: 'GET', path: '/profile/me' })
     .output(profileOutputSchema),
 
   update: oc
-    .route({ method: 'PUT', path: '/profile' })
+    .route({ method: 'PUT', path: '/profile/me' })
     .input(updateProfileSchema)
     .output(updateProfileOutputSchema),
-};
+});

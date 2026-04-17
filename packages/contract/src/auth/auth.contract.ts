@@ -6,9 +6,12 @@ import {
   registerOutputSchema,
   refreshSchema,
   refreshOutputSchema,
+  googleCallbackSchema,
+  successOutputSchema,
+  voidOutputSchema,
 } from '@cloudvault/validators';
 
-export const authContract = {
+export const authContract = oc.router({
   login: oc
     .route({ method: 'POST', path: '/auth/login' })
     .input(loginSchema)
@@ -24,10 +27,12 @@ export const authContract = {
     .input(refreshSchema)
     .output(refreshOutputSchema),
 
-  logout: oc.route({ method: 'POST', path: '/auth/logout' }),
+  logout: oc
+    .route({ method: 'POST', path: '/auth/logout' })
+    .output(successOutputSchema),
 
-  googleCallback: oc.route({
-    method: 'GET',
-    path: '/auth/google/callback',
-  }),
-};
+  googleCallback: oc
+    .route({ method: 'GET', path: '/auth/google/callback' })
+    .input(googleCallbackSchema)
+    .output(voidOutputSchema),
+});

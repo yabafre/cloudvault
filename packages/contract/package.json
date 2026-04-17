@@ -8,9 +8,10 @@
     "lint": "echo \"No lint configured\""
   },
   "dependencies": {
-    "@orpc/contract": "^1.4.0",
-    "@cloudvault/zod": "workspace:*",
     "@cloudvault/validators": "workspace:*",
-    "@cloudvault/types": "workspace:*"
+    "@orpc/contract": "^1.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
   }
 }
