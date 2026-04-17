@@ -1,0 +1,20 @@
+# workmux config for CloudVault APED parallel sprint
+# Docs: https://workmux.raine.dev/
+
+panes:
+  - command: <agent>
+    focus: true
+
+# Only gitignored files — tracked files are already in the worktree via git checkout.
+# .mcp.json is critical so /aped-story can reach the Linear MCP server.
+# .claude/settings.local.json shares permission allowances across worktrees.
+files:
+  copy:
+    - .env*
+    - .mcp.json
+    - .claude/settings.local.json
+  symlink:
+    - node_modules
+
+post_create:
+  - pnpm install --frozen-lockfile || pnpm install

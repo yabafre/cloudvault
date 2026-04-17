@@ -93,6 +93,8 @@ sprint:
   ticket_project: "CloudVault"
   ticket_team: "Koni"
   active_epic: 1
+  parallel_limit: 3
+  review_limit: 2
   stories:
     1-1-zod-validators-packages:
       status: done
