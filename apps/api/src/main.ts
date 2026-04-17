@@ -1,16 +1,20 @@
-import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestFactory } from '@nestjs/core';
+import { contract } from '@cloudvault/contract';
+import { OpenAPIGenerator } from '@orpc/openapi';
+import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
+import { apiReference } from '@scalar/nestjs-api-reference';
 import cookieParser from 'cookie-parser';
-import { AppModule } from './app.module';
+import helmet from 'helmet';
+
+import { AppModule } from './app.module.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Cookie parser middleware for reading cookies
+  app.use(helmet());
   app.use(cookieParser());
 
-  // CORS configuration
   app.enableCors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
@@ -18,34 +22,33 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Strip properties not in DTO
-      forbidNonWhitelisted: true, // Throw error if extra properties
-      transform: true, // Transform payloads to DTO instances
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
 
-  // Swagger configuration
-  const config = new DocumentBuilder()
-    .setTitle('CloudVault API')
-    .setDescription('API de stockage cloud securise')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .addTag('auth', 'Authentication endpoints')
-    .build();
+  const openApiGenerator = new OpenAPIGenerator({
+    schemaConverters: [new ZodToJsonSchemaConverter()],
+  });
+  const spec = await openApiGenerator.generate(contract, {
+    info: {
+      title: 'CloudVault API',
+      version: '1.0.0',
+      description: 'Privacy-first cloud storage — oRPC contract',
+    },
+  });
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  app.use('/api/docs', apiReference({ content: spec }));
 
   const port = process.env.API_PORT ?? 4000;
   await app.listen(port);
 
-  console.log(`Application running on: http://localhost:${port}`);
-  console.log(`Swagger docs: http://localhost:${port}/api/docs`);
+  console.warn(`API running on: http://localhost:${port}`);
+  console.warn(`Scalar docs: http://localhost:${port}/api/docs`);
 }
-bootstrap();
+
+void bootstrap();

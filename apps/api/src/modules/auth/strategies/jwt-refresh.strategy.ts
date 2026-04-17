@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
-import { PrismaService } from '@/prisma';
+import { PrismaService } from '../../../prisma/index.js';
 
 // Custom extractor that checks cookie first, then body
 function extractRefreshToken(req: Request): string | null {

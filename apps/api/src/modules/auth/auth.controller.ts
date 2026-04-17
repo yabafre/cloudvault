@@ -9,22 +9,16 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
 import type { Request, Response } from 'express';
-import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, TokensDto } from './dto';
+import { AuthService } from './auth.service.js';
+import { RegisterDto, LoginDto, TokensDto } from './dto/index.js';
 import {
   LocalAuthGuard,
   JwtAuthGuard,
   JwtRefreshGuard,
   GoogleAuthGuard,
-} from './guards';
-import { Public, CurrentUser } from './decorators';
+} from './guards/index.js';
+import { Public, CurrentUser } from './decorators/index.js';
 import { ConfigService } from '@nestjs/config';
 
 // Cookie configuration
@@ -60,7 +54,6 @@ interface RequestWithRefresh extends Request {
   };
 }
 
-@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -70,9 +63,6 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  @ApiOperation({ summary: 'Register a new user' })
-  @ApiResponse({ status: 201, description: 'User successfully registered' })
-  @ApiResponse({ status: 409, description: 'Email already registered' })
   async register(
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
@@ -93,9 +83,6 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login with email and password' })
-  @ApiResponse({ status: 200, description: 'Login successful' })
-  @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(
     @Req() req: RequestWithUser,
     @Res({ passthrough: true }) res: Response,
@@ -116,9 +103,6 @@ export class AuthController {
   @UseGuards(JwtRefreshGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Refresh access token' })
-  @ApiResponse({ status: 200, description: 'Tokens refreshed successfully' })
-  @ApiResponse({ status: 401, description: 'Invalid refresh token' })
   async refreshTokens(
     @Req() req: RequestWithRefresh,
     @Res({ passthrough: true }) res: Response,
@@ -141,9 +125,6 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Logout user' })
-  @ApiResponse({ status: 200, description: 'Logout successful' })
   async logout(
     @CurrentUser('id') userId: string,
     @Req() req: Request,
@@ -160,9 +141,6 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ status: 200, description: 'User profile' })
   async getProfile(@CurrentUser('id') userId: string) {
     return this.authService.getProfile(userId);
   }
@@ -171,7 +149,6 @@ export class AuthController {
   @Public()
   @UseGuards(GoogleAuthGuard)
   @Get('google')
-  @ApiOperation({ summary: 'Initiate Google OAuth login' })
   async googleAuth() {
     // Guard redirects to Google
   }
@@ -179,7 +156,6 @@ export class AuthController {
   @Public()
   @UseGuards(GoogleAuthGuard)
   @Get('google/callback')
-  @ApiOperation({ summary: 'Google OAuth callback' })
   async googleAuthCallback(
     @Req() req: RequestWithUser & { query: { state?: string } },
     @Res() res: Response,

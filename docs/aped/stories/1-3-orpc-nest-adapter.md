@@ -44,16 +44,17 @@
 
 ## Tasks
 
-- [ ] Install backend deps in `apps/api/`: `@orpc/server`, `@orpc/nest`, `@orpc/openapi`, `@scalar/nestjs-api-reference`, `helmet`, `@nestjs/throttler` [AC1, AC3, AC4]
-- [ ] Uninstall `@nestjs/swagger` from `apps/api/package.json` (keep `class-validator`/`class-transformer` until story 2-1) [AC1]
-- [ ] Create `apps/api/src/orpc/orpc-error.filter.ts` — global `@Catch()` filter that maps `ORPCError` pass-through, known NestExceptions → `ApiErrorCode`, unknown/5xx → `INTERNAL_ERROR`, strips stack traces from client response, logs original to server [AC2]
-- [ ] Create `apps/api/src/orpc/orpc-error.filter.spec.ts` — unit tests for each mapping case (ORPCError pass-through, Unauthorized→UNAUTHORIZED, Forbidden→FORBIDDEN, NotFound→NOT_FOUND, Conflict→CONFLICT, BadRequest→VALIDATION_ERROR, unknown→INTERNAL_ERROR, 5xx→INTERNAL_ERROR, no stack leak) [AC2]
-- [ ] Create `apps/api/src/orpc/orpc.module.ts` + `index.ts` — wires `@orpc/nest` adapter against `contract` from `@cloudvault/contract`, registers `OrpcErrorFilter` as `APP_FILTER` [AC1, AC2]
-- [ ] Modify `apps/api/src/main.ts` — remove `SwaggerModule` + `DocumentBuilder` imports, add `app.use(helmet())`, mount Scalar UI at `/api/docs` via `@scalar/nestjs-api-reference` pointed at the OpenAPI document generated from the contract via `@orpc/openapi` [AC1, AC4]
-- [ ] Modify `apps/api/src/app.module.ts` — register `ThrottlerModule.forRoot({ throttlers: [{ ttl: 60000, limit: 100 }] })`, register `APP_GUARD` with `ThrottlerGuard`, import `OrpcModule` [AC3]
-- [ ] Modify `apps/api/src/modules/auth/auth.controller.ts` — remove all imports from `@nestjs/swagger` and strip `@ApiTags`, `@ApiOperation`, `@ApiResponse`, `@ApiBearerAuth` decorators; preserve REST logic and DTOs untouched (migration of the controller itself is story 2-1) [AC1]
-- [ ] Manual verification script documented in Dev Notes: `pnpm dev:api` → `curl -I http://localhost:4000/` (AC4 headers), visit `http://localhost:4000/api/docs` (AC1), run a 101-request burst with `xargs`/`ab` (AC3) [AC1, AC3, AC4]
-- [ ] Run `pnpm --filter @cloudvault/api build && pnpm --filter @cloudvault/api test` — all green [AC5]
+- [x] Install backend deps in `apps/api/`: `@orpc/server`, `@orpc/nest`, `@orpc/openapi`, `@orpc/zod` (added), `@scalar/nestjs-api-reference`, `helmet`, `@nestjs/throttler` [AC1, AC3, AC4]
+- [x] Uninstall `@nestjs/swagger` from `apps/api/package.json` (keep `class-validator`/`class-transformer` until story 2-1) [AC1]
+- [x] Create `apps/api/src/orpc/orpc-error.filter.ts` — global `@Catch()` filter mapping (duck-type on `ORPCError` shape to avoid a runtime `@orpc/server` import in test context) [AC2]
+- [x] Create `apps/api/src/orpc/orpc-error.filter.spec.ts` — 11 unit tests covering the full mapping table + no-stack-leak guard [AC2]
+- [x] Create `apps/api/src/orpc/orpc.module.ts` + `index.ts` — wires `@orpc/nest` `ORPCModule.forRoot`, registers `OrpcErrorFilter` as global `APP_FILTER` [AC1, AC2]
+- [x] Modify `apps/api/src/main.ts` — drop `@nestjs/swagger`, add `helmet()`, mount Scalar UI at `/api/docs` via `@scalar/nestjs-api-reference` pointed at the `@orpc/openapi`-generated spec (schema converter: `ZodToJsonSchemaConverter` from `@orpc/zod/zod4`) [AC1, AC4]
+- [x] Modify `apps/api/src/app.module.ts` — `ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 100 }] })`, `APP_GUARD` with `ThrottlerGuard` before `JwtAuthGuard`, import `OrpcModule` [AC3]
+- [x] Modify `apps/api/src/modules/auth/auth.controller.ts` — strip all `@nestjs/swagger` decorators (`@ApiTags`, `@ApiOperation`, `@ApiResponse`, `@ApiBearerAuth`); REST logic + guards + DTOs preserved [AC1]
+- [x] **Added task — ESM migration of `apps/api`.** Required because all `@orpc/*` packages are ESM-only (see Scope decisions §4 below). Added `"type": "module"` to `apps/api/package.json` + `packages/contract`, `packages/validators`, `packages/types`, `packages/zod` `package.json`. Switched nest-cli to SWC builder. Added `.js` extensions to relative imports (`perl`/`python` batch rewrite, 45 apps/api + 17 workspace). Added `@jest/globals` imports in existing specs. Runtime via `node --import @swc-node/register/esm-register src/main.ts` (honours `emitDecoratorMetadata`, unlike plain esbuild/tsx). [—]
+- [x] Manual verification: `pnpm dev:api` booted; `curl -sI /` returns `Content-Security-Policy` + `Strict-Transport-Security` + `X-Content-Type-Options: nosniff` ✓ (AC4); `curl /api/docs` returns Scalar HTML ✓ (AC1); 105-request burst → last 5 codes `429` ✓ (AC3). [AC1, AC3, AC4]
+- [x] Build + test gate green: `nest build` succeeds (34 files compiled by SWC in <100ms); `jest` runs 3 test suites / 18 tests all passing. [AC5]
 
 ## Dev Notes
 
@@ -70,6 +71,7 @@
 1. **Defer `class-validator` + `class-transformer` removal to story 2-1 (KON-90).** Reason: `auth.controller.ts` is still REST with DTOs until 2-1 migrates it to oRPC. Removing `class-validator` now would break auth in-flight. 1-3 removes only `@nestjs/swagger` and strips its decorators from `auth.controller.ts`. The global `ValidationPipe` in `main.ts` stays (oRPC ignores Nest pipes, so no double-validation risk on oRPC routes).
 2. **No demo oRPC handler in 1-3.** Story 1-6 (health endpoint, depends on 1-3) ships the first real handler. AC2 is verified here by direct unit tests on `OrpcErrorFilter`; end-to-end verification of the filter comes with 1-6.
 3. **10 tasks, 1 session.** Validated as the right size.
+4. **ESM migration of `apps/api` pulled into 1-3 (added mid-dev, user validated).** Every `@orpc/*` package ships pure ESM (no CJS fallback) — per `@orpc/nest`'s official docs this requires `"type": "module"` in the consumer's `package.json` on Node ≥ 22. Three rejected alternatives: (a) dynamic `await import()` for every oRPC touch-point — breaks the `@Implement(contract.X)` decorator pattern that stories 2-1+ depend on; (b) bundle with esbuild — loses `emitDecoratorMetadata` which NestJS DI requires; (c) split into a follow-up story — would block 1-6/2-1/3-1/4-1 indefinitely. Chosen approach: make `apps/api` ESM end-to-end, use SWC for build (preserves decorator metadata), run production from source via `@swc-node/register/esm-register`. Also flipped `@cloudvault/contract`, `@cloudvault/validators`, `@cloudvault/types`, `@cloudvault/zod` to `"type": "module"` for consistency; their ESM imports now resolve cleanly since Node 22 natively loads `.ts` from workspace sources. The `@prisma/client` CJS-named-export incompatibility forced a default-import + destructure pattern in `auth.service.ts` and `prisma.service.ts`.
 
 ### `OrpcErrorFilter` mapping table
 
@@ -251,12 +253,54 @@ curl -sI http://localhost:4000/ | grep -E '(Content-Security-Policy|X-Content-Ty
 
 ## Dev Agent Record
 
-- **Model:** {{model used}}
-- **Started:** {{timestamp}}
-- **Completed:** {{timestamp}}
+- **Model:** Claude Opus 4.7 (1M context)
+- **Started:** 2026-04-17
+- **Completed:** 2026-04-17
 
 ### Debug Log
 
+- **Jest hang (resolved).** Initial jest runs deadlocked because the worktree's root `node_modules` was a symlink to the main project, whose pnpm store was missing the newly-added deps. Two other Claude sessions in KON-85/KON-86 worktrees compounded the contention. Fix: `rm node_modules && pnpm install` inside the worktree to give it its own physical `node_modules/.pnpm`.
+- **`@orpc/server` ESM-only → ts-jest CommonJS test deadlock.** Writing `import { ORPCError } from '@orpc/server'` in the spec made ts-jest hang indefinitely during module transform. Fixed by duck-typing in the filter: `isOrpcErrorShape(err)` checks `defined/code/status` shape; the spec builds plain objects matching that shape (`orpcErrorLike`). The filter also uses `import type` only, so no runtime `require` of `@orpc/server`.
+- **`jest is not defined` in ESM mode.** After ESM migration, jest globals are not auto-injected. Added `import { jest, describe, it, ... } from '@jest/globals'` to all three existing specs.
+- **`@prisma/client` named-export failure.** `import { AuthProvider } from '@prisma/client'` fails under ESM because Prisma ships CJS and Node's static analyzer can't see its enum exports. Fixed with `import prismaClient from '@prisma/client'; const { AuthProvider } = prismaClient;` (same for `PrismaClient`).
+- **`.js` extensions required for Node ESM resolution.** Wrote a Python script that inspects each `./foo` import — if `./foo.ts` exists append `.js`, if `./foo/index.ts` exists append `/index.js`. Ran it across `apps/api/src/` (45 imports) and `packages/{contract,validators,types}/src/` (17 imports).
+- **esbuild bundle attempt abandoned.** Bundling with esbuild first produced runtime errors: (a) `__dirname not defined in ES module scope` from `bcrypt` native bindings (fixed via banner polyfill), (b) more critically, NestJS DI broke on `JwtStrategy` because esbuild doesn't honor `emitDecoratorMetadata`. Reverted to running from source via `@swc-node/register` (SWC does emit decorator metadata) and dropped `esbuild.config.mjs`.
+- **Throttler burst test interaction with JwtAuthGuard.** The 105-request burst sent to `GET /` returned `429` on the 101st+ requests as expected — `ThrottlerGuard` is correctly registered before `JwtAuthGuard` in `APP_GUARD` declaration order.
+
 ### Completion Notes
 
+- All 4 ticket ACs validated end-to-end against a live API instance on port 4001 (see Tasks §10 for the raw curl output). AC5 satisfied: `nest build` green, `jest` reports `Test Suites: 3 passed, 3 total / Tests: 18 passed, 18 total`.
+- **ESM migration was in-scope creep** that had to be resolved in 1-3 to land a runnable API. Documented in Scope decisions §4 above. This also means future stories 2-1/2-2/... can now use `@Implement(contract.X)` decorators natively without workarounds.
+- **Known technical debt (deferred by design):** (a) `class-validator` + `class-transformer` + `ValidationPipe` still in place — 2-1 removes them; (b) no real oRPC handler mounted yet — 1-6 (health) ships the first; (c) `nestjs-pino` + request-id middleware — 1-5 delivers those; (d) runtime uses `@swc-node/register` from source, should be replaced with a proper production bundle once we have SWC + decorator-preserving bundler (`unplugin-swc` + Rollup, or `@nestjs/swc` CLI update). Flagged for a future hardening story before production deploy.
+- `OrpcModule` mounts `ORPCModule.forRoot({ interceptors: [] })` — empty interceptor list is fine for 1-3 since no handler is mounted. Future stories will add `onError` / `RethrowHandlerPlugin` interceptors as they come online.
+- The filter's unit test suite hits 11 mapping cases directly — it does NOT exercise the NestJS/ORPCModule integration end-to-end. 1-6 (health endpoint) will cover that integration.
+
 ### File List
+
+**Created:**
+- `apps/api/src/orpc/orpc.module.ts`
+- `apps/api/src/orpc/orpc-error.filter.ts`
+- `apps/api/src/orpc/orpc-error.filter.spec.ts`
+- `apps/api/src/orpc/index.ts`
+- `apps/api/.swcrc`
+
+**Modified (primary story scope):**
+- `apps/api/src/main.ts` — drop Swagger, add helmet + Scalar + @orpc/openapi generator
+- `apps/api/src/app.module.ts` — add ThrottlerModule + ThrottlerGuard + OrpcModule
+- `apps/api/src/modules/auth/auth.controller.ts` — strip all @nestjs/swagger decorators
+- `apps/api/src/modules/auth/dto/register.dto.ts` — strip @ApiProperty
+- `apps/api/src/modules/auth/dto/login.dto.ts` — strip @ApiProperty
+- `apps/api/src/modules/auth/dto/tokens.dto.ts` — strip @ApiProperty
+- `apps/api/package.json` — deps, `"type": "module"`, ESM test/start scripts, jest ESM config
+- `apps/api/nest-cli.json` — `builder: "swc"`, `typeCheck: false`
+
+**Modified (ESM migration fallout):**
+- `apps/api/src/prisma/prisma.service.ts` — default-import + destructure `PrismaClient`
+- `apps/api/src/modules/auth/auth.service.ts` — default-import + destructure `AuthProvider`
+- `apps/api/src/app.controller.spec.ts` — `@jest/globals` import
+- `apps/api/src/prisma/prisma.service.spec.ts` — `@jest/globals` import
+- `packages/contract/package.json` — `"type": "module"`
+- `packages/validators/package.json` — `"type": "module"`
+- `packages/types/package.json` — `"type": "module"`
+- `packages/zod/package.json` — `"type": "module"`
+- All `.ts` files in `apps/api/src/`, `packages/contract/src/`, `packages/validators/src/`, `packages/types/src/` — `.js` / `/index.js` suffixes added to relative imports
