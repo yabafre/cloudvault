@@ -109,10 +109,11 @@ sprint:
       depends_on: ["1-1-zod-validators-packages"]
       worktree: null
     1-3-orpc-nest-adapter:
-      status: pending
+      status: ready-for-dev
       ticket: "KON-84"
+      file: "docs/aped/stories/1-3-orpc-nest-adapter.md"
       depends_on: ["1-2-contract-package-scaffold"]
-      worktree: null
+      worktree: "../CloudVault-official__worktrees/feature-kon-84-1-3-orpc-nest-adapter"
     1-4-prisma-schema-folder-refactor:
       status: pending
       ticket: "KON-85"
