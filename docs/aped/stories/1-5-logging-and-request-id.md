@@ -64,14 +64,14 @@
 
 ## Tasks
 
-- [ ] Install pino stack: `pnpm --filter @cloudvault/api add nestjs-pino pino pino-http` and `pnpm --filter @cloudvault/api add -D pino-pretty` [AC3]
-- [ ] Create `apps/api/src/common/logger/request-id.middleware.ts` — validates `x-request-id` against `^[A-Za-z0-9_-]{8,128}$`, falls back to `crypto.randomUUID()` otherwise; sets `req.id` (consumed by pino-http's `genReqId`) and the `x-request-id` response header [AC1, AC2]
-- [ ] Create `apps/api/src/common/logger/logger.module.ts` — exports `LoggerModule.forRootAsync` backed by `ConfigService`: transport switches on `NODE_ENV`, `redact` paths per AC5, `genReqId: (req) => req.id`, `customProps: (req) => ({ requestId: req.id, ...(req.user?.sub ? { userId: req.user.sub } : {}) })`, `customLogLevel` maps 5xx → error, 4xx → warn, else info [AC3, AC4, AC5, AC7]
-- [ ] Create barrel `apps/api/src/common/logger/index.ts` re-exporting the module and middleware [—]
-- [ ] Wire it globally: `app.module.ts` imports `LoggerModule`, implements `NestModule.configure(consumer)` to apply `RequestIdMiddleware` on `forRoutes('*')`; ensure it runs **before** any auth guard so public routes also get a `requestId` [AC1, AC2, AC6]
-- [ ] Update `apps/api/src/main.ts`: pass `{ bufferLogs: true }` to `NestFactory.create`, call `app.useLogger(app.get(Logger))` from `nestjs-pino`, replace the two `console.log` bootstrap lines with `Logger` calls [AC6]
-- [ ] Unit test `apps/api/src/common/logger/request-id.middleware.spec.ts` — three branches per AC2/AC8a with mocked `req`/`res`/`next` (plain Jest, no Nest testing module needed) [AC8]
-- [ ] E2E test `apps/api/test/logging.e2e-spec.ts` — boot the app with `Test.createTestingModule`, supertest `GET /`, assert header presence, echo semantics, and injection rejection per AC8b [AC8]
+- [x] Install pino stack: `pnpm --filter @cloudvault/api add nestjs-pino pino pino-http` and `pnpm --filter @cloudvault/api add -D pino-pretty` [AC3]
+- [x] Create `apps/api/src/common/logger/request-id.middleware.ts` — validates `x-request-id` against `^[A-Za-z0-9_-]{8,128}$`, falls back to `crypto.randomUUID()` otherwise; sets `req.id` (consumed by pino-http's `genReqId`) and the `x-request-id` response header [AC1, AC2]
+- [x] Create `apps/api/src/common/logger/logger.module.ts` — exports `LoggerModule.forRootAsync` backed by `ConfigService`: transport switches on `NODE_ENV`, `redact` paths per AC5, `genReqId: (req) => req.id`, `customProps: (req) => ({ requestId: req.id, ...(req.user?.sub ? { userId: req.user.sub } : {}) })`, `customLogLevel` maps 5xx → error, 4xx → warn, else info [AC3, AC4, AC5, AC7]
+- [x] Create barrel `apps/api/src/common/logger/index.ts` re-exporting the module and middleware [—]
+- [x] Wire it globally: `app.module.ts` imports `LoggerModule`, implements `NestModule.configure(consumer)` to apply `RequestIdMiddleware` on `forRoutes('*')`; ensure it runs **before** any auth guard so public routes also get a `requestId` [AC1, AC2, AC6]
+- [x] Update `apps/api/src/main.ts`: pass `{ bufferLogs: true }` to `NestFactory.create`, call `app.useLogger(app.get(Logger))` from `nestjs-pino`, replace the two `console.log` bootstrap lines with `Logger` calls [AC6]
+- [x] Unit test `apps/api/src/common/logger/request-id.middleware.spec.ts` — three branches per AC2/AC8a with mocked `req`/`res`/`next` (plain Jest, no Nest testing module needed) [AC8]
+- [x] E2E test `apps/api/test/logging.e2e-spec.ts` — boot the app with `Test.createTestingModule`, supertest `GET /`, assert header presence, echo semantics, and injection rejection per AC8b [AC8]
 
 ## Dev Notes
 
@@ -187,12 +187,39 @@ All four are MIT-licensed, maintained, and aligned with the monorepo's existing 
 
 ## Dev Agent Record
 
-- **Model:** {{model used}}
-- **Started:** {{timestamp}}
-- **Completed:** {{timestamp}}
+- **Model:** Claude Opus 4.7 (1M context)
+- **Started:** 2026-04-17
+- **Completed:** 2026-04-17
 
 ### Debug Log
 
+- **pnpm virtual store drift (worktree):** first `pnpm --filter @cloudvault/api add` failed with `ERR_PNPM_UNEXPECTED_VIRTUAL_STORE` because the worktree's `node_modules` symlinked back to the main project's `.pnpm`. A root `pnpm install --config.confirmModulesPurge=false` reconciled the layout; a second reconciliation was needed later when a stale recreate dropped `nestjs-pino` from the store. Flagged as a sprint-wide infra note — not fixed in this story.
+- **pino-http + middleware ordering, duplicate `requestId` in logs:** first pass put the validation in `RequestIdMiddleware`, which ran *after* pino-http's `genReqId`. pino-http generated its own UUID, then the middleware overwrote `req.id` to a different value, producing two `requestId` entries in the same log object (one from `customProps` at response time, one from the earlier customProps bind). Refactored to move validation into a `resolveRequestId` helper used directly by `genReqId`; the middleware now only copies the resolved id to the response header. Single canonical id end-to-end.
+- **AC4 field naming:** pino-http serialises the request id inside `req.id`, not at top level. To satisfy AC4 (`requestId` at top level) while keeping `req.id` canonical, `customProps` re-emits `requestId: req.id` at the top level. Sample log verified: `{"req":{"id":"…"},"requestId":"…","res":{…},"responseTime":…}`.
+- **Prisma client not generated / pre-existing TS errors:** `pnpm db:generate` fails with `MODULE_NOT_FOUND` in this env, producing ~30 TS errors in `auth.service.ts`, `prisma.service.ts`, etc. None of these errors are introduced by or related to this story — our new files (`logger.module.ts`, `request-id.middleware.ts`, `request-id.util.ts`, `main.ts`, `app.module.ts`) typecheck cleanly. Flagged for the Prisma 7 folder-refactor story (1-4 / KON-85).
+- **Pre-existing broken `app.e2e-spec.ts`:** the existing jest-e2e config has no `moduleNameMapper`, so the first `@/…` import in `AppModule` unresolves. Verified on pre-change HEAD (`git show 403dea2:apps/api/src/app.module.ts`) that `@/prisma` and `@/modules/auth` imports already made this test non-runnable. This story's new `@/common/logger` import just surfaces the failure one line earlier. New `logging.e2e-spec.ts` avoids the issue by using only relative imports.
+
 ### Completion Notes
 
+- **All 8 ACs satisfied.** Unit (11 cases) + E2E (4 cases) green. Full logs captured in the E2E run output visibly match AC4 (`requestId, method, url, statusCode, responseTime`) and AC7 (no stray `userId` on public routes).
+- **AC5 (redact)** is declarative in `logger.module.ts`. Not directly asserted in tests to avoid pinning on pino-internal serialisation order; would require stdout capture or a custom transport that coverage-wise adds little beyond inspecting the config. Can be strengthened in a follow-up if Aria (`/aped-review`) flags it.
+- **Scope discipline:** `ValidationPipe`, `@nestjs/swagger`, `class-validator`, helmet, throttler are untouched. `auth.controller.ts` and REST routes remain as-is for KON-84 (1-3-orpc-nest-adapter) to migrate. `bcrypt` untouched (KON-91).
+- **Test-suite perf note:** `prisma.service.spec.ts` takes ~860s per run (pre-existing DB-connection wait, unrelated). Skipped in TDD iteration; would need the sprint to stub the Prisma client or co-locate with Testcontainers.
+- **Security posture:** X-Request-Id is now a safe-by-default identifier — attacker-controlled values fail the `^[A-Za-z0-9_-]{8,128}$` check and are replaced without logging the rejected string. Secrets redacted at the pino layer before any sink sees them.
+
 ### File List
+
+**Created:**
+- `apps/api/src/common/logger/logger.module.ts`
+- `apps/api/src/common/logger/request-id.middleware.ts`
+- `apps/api/src/common/logger/request-id.middleware.spec.ts`
+- `apps/api/src/common/logger/request-id.util.ts`
+- `apps/api/src/common/logger/index.ts`
+- `apps/api/test/logging.e2e-spec.ts`
+
+**Modified:**
+- `apps/api/src/main.ts` — `bufferLogs`, `useLogger(PinoLogger)`, bootstrap messages via `Logger`.
+- `apps/api/src/app.module.ts` — imports `LoggerModule`, implements `NestModule.configure` to mount `RequestIdMiddleware`.
+- `apps/api/package.json` — added `nestjs-pino@4.6.1`, `pino@10.3.1`, `pino-http@11.0.0`, `pino-pretty@13.1.3` (dev).
+- `pnpm-lock.yaml`
+- `docs/aped/state.yaml` — `1-5-logging-and-request-id.status: in-progress → review`.
