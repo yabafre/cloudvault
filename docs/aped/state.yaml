@@ -119,8 +119,9 @@ sprint:
       depends_on: []
       worktree: null
     1-5-logging-and-request-id:
-      status: pending
+      status: ready-for-dev
       ticket: "KON-86"
+      file: "docs/aped/stories/1-5-logging-and-request-id.md"
       depends_on: []
       worktree: null
     1-6-health-endpoint:
