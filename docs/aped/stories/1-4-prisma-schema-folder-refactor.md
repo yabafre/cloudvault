@@ -1,7 +1,7 @@
 # Story: 1-4-prisma-schema-folder-refactor — Upgrade Prisma to 7.7.0 and adopt the schema folder layout
 
 **Epic:** 1 — Platform Foundation & Contract Layer
-**Status:** ready-for-dev
+**Status:** review
 **Ticket:** [KON-85](https://linear.app/koni/issue/KON-85)
 **Branch:** `feature/KON-85-1-4-prisma-schema-folder-refactor`
 **Size:** M (3 pts) — re-estimated from ticket's S (1 pt) due to Prisma 6 → 7 upgrade scope
@@ -54,19 +54,19 @@
 
 ## Tasks
 
-- [ ] Bump `apps/api/package.json`: `prisma` → `^7.7.0`, `@prisma/client` → `^7.7.0`; add runtime deps `@prisma/adapter-pg` (^7.7.0) and `pg` (^8.13.0); add devDependency `@types/pg` (^8.11.0); run `pnpm install` [AC1]
-- [ ] Create `apps/api/prisma/schema/schema.prisma` with the datasource block (`provider = "postgresql"`, `url = env("DATABASE_URL")`) and the generator block (`provider = "prisma-client"`, `output = "../../src/prisma/generated"`) — no preview flags [AC2]
-- [ ] Create `apps/api/prisma/schema/user.prisma` with the `User` model (unchanged columns, indexes, `@@map("users")`) and the `AuthProvider` enum [AC2]
-- [ ] Create `apps/api/prisma/schema/file.prisma` with the `File` model (unchanged columns, indexes, `@@map("files")`) and the `FileStatus` enum [AC2]
-- [ ] Create `apps/api/prisma/schema/refresh-token.prisma` with the `RefreshToken` model (unchanged columns, indexes, `@@map("refresh_tokens")`) [AC2]
-- [ ] Delete `apps/api/prisma/schema.prisma` [AC2]
-- [ ] Add `src/prisma/generated/` to `apps/api/.gitignore` and run `pnpm db:generate` — confirm the client lands at `apps/api/src/prisma/generated/client.ts` (or equivalent entry point) [AC3]
-- [ ] Refactor `apps/api/src/prisma/prisma.service.ts`: import `PrismaClient` from `@/prisma/generated/client`, import `PrismaPg` from `@prisma/adapter-pg`, create the adapter in the constructor, call `super({ adapter, log: ... })`, preserve `onModuleInit`/`onModuleDestroy`/`cleanDatabase` verbatim [AC5]
-- [ ] Update `apps/api/src/modules/auth/auth.service.ts:13` to import `AuthProvider` from `@/prisma/generated/client` [AC6]
-- [ ] Grep `@prisma/client` across `apps/api/src/**` to confirm zero remaining imports (pnpm-lock.yaml entries are expected and fine) [AC6]
-- [ ] Run `pnpm db:migrate` against the Neon DB reset to fresh, then `pnpm --filter @cloudvault/api exec prisma migrate status` — confirm no new migration was generated [AC4]
-- [ ] Run `pnpm --filter @cloudvault/api exec tsc --noEmit`, `pnpm build`, `pnpm --filter @cloudvault/api test` — all green [AC7]
-- [ ] Run `pnpm dev:api`, execute a one-off `SELECT 1` via a temp script or an existing seam (`prisma.service.spec.ts` integration point), confirm the adapter-based connection succeeds [AC8]
+- [x] Bump `apps/api/package.json`: `prisma` → `^7.7.0`, `@prisma/client` → `^7.7.0`; add runtime deps `@prisma/adapter-pg` (^7.7.0) and `pg` (^8.13.0); add devDependency `@types/pg` (^8.11.0); run `pnpm install` [AC1]
+- [x] Create `apps/api/prisma/schema/schema.prisma` with the datasource block (`provider = "postgresql"`, `url = env("DATABASE_URL")`) and the generator block (`provider = "prisma-client"`, `output = "../../src/prisma/generated"`) — no preview flags [AC2]
+- [x] Create `apps/api/prisma/schema/user.prisma` with the `User` model (unchanged columns, indexes, `@@map("users")`) and the `AuthProvider` enum [AC2]
+- [x] Create `apps/api/prisma/schema/file.prisma` with the `File` model (unchanged columns, indexes, `@@map("files")`) and the `FileStatus` enum [AC2]
+- [x] Create `apps/api/prisma/schema/refresh-token.prisma` with the `RefreshToken` model (unchanged columns, indexes, `@@map("refresh_tokens")`) [AC2]
+- [x] Delete `apps/api/prisma/schema.prisma` [AC2]
+- [x] Add `src/prisma/generated/` to `apps/api/.gitignore` and run `pnpm db:generate` — confirm the client lands at `apps/api/src/prisma/generated/client.ts` (or equivalent entry point) [AC3]
+- [x] Refactor `apps/api/src/prisma/prisma.service.ts`: import `PrismaClient` from `@/prisma/generated/client`, import `PrismaPg` from `@prisma/adapter-pg`, create the adapter in the constructor, call `super({ adapter, log: ... })`, preserve `onModuleInit`/`onModuleDestroy`/`cleanDatabase` verbatim [AC5]
+- [x] Update `apps/api/src/modules/auth/auth.service.ts:13` to import `AuthProvider` from `@/prisma/generated/client` [AC6]
+- [x] Grep `@prisma/client` across `apps/api/src/**` to confirm zero remaining imports (pnpm-lock.yaml entries are expected and fine) [AC6]
+- [x] Run `pnpm db:migrate` against the Neon DB reset to fresh, then `pnpm --filter @cloudvault/api exec prisma migrate status` — confirm no new migration was generated [AC4]
+- [x] Run `pnpm --filter @cloudvault/api exec tsc --noEmit`, `pnpm build`, `pnpm --filter @cloudvault/api test` — all green [AC7]
+- [x] Run `pnpm dev:api`, execute a one-off `SELECT 1` via a temp script or an existing seam (`prisma.service.spec.ts` integration point), confirm the adapter-based connection succeeds [AC8]
 
 ## Dev Notes
 
@@ -186,12 +186,60 @@ Dev (apps/api):
 
 ## Dev Agent Record
 
-- **Model:** {{model used}}
-- **Started:** {{timestamp}}
-- **Completed:** {{timestamp}}
+- **Model:** claude-opus-4-7 (1M context)
+- **Started:** 2026-04-17T22:11Z
+- **Completed:** 2026-04-17T22:55Z
 
 ### Debug Log
 
+- `pnpm install` initially did not materialize `prisma@7.7.0` in `node_modules/.pnpm` even though the lockfile was updated — only Prisma 6.19.1 remained in the store. Resolved by a clean `rm -rf node_modules && pnpm install`. Root cause suspected: shared `pnpm` store state across the main project and worktree checkouts, stale before the frozen-lockfile toggle.
+- First `pnpm db:generate` failed with "Could not find Prisma Schema". Prisma 7 does **not** auto-discover the schema folder layout the way v6 preview did; the tool requires explicit pointing via `prisma.config.ts`. Added that file with `schema: prisma/schema`.
+- Second attempt failed with `P1012: datasource property 'url' is no longer supported in schema files`. Prisma 7 moves the datasource URL out of `schema.prisma` into `prisma.config.ts` (`datasource.url = env('DATABASE_URL')`). Removed the `url` line from `schema.prisma/datasource` block.
+- Generated client used `import.meta.url` (ESM-only), which NestJS's CommonJS TypeScript config rejected. Fix: added `moduleFormat = "cjs"` to the generator block. Client was re-emitted as CJS-compatible.
+- Jest failed to resolve the `@/` path alias (tsconfig paths are not consumed by jest automatically) and then failed on the generated code's `.js` extension imports. Added `moduleNameMapper` entries for the tsconfig aliases and a `^(\\.{1,2}/.*)\\.js$` → `$1` rule to translate ESM-style `.js` imports to their `.ts` source at resolution time.
+- `prisma migrate status` required the `DATABASE_URL` env to be loaded; using `pnpm dotenv -- ...` (matching the root script pattern) solved it.
+- Final Neon smoke ran from the compiled `dist/` because `ts-node` with the generated `.js` import pattern trips over the same NodeNext resolution issue that jest had — the compiled build handles it correctly via NestJS's webpack-less `nest build`.
+
 ### Completion Notes
 
+Every AC validated:
+- **AC1** — `prisma@7.7.0`, `@prisma/client@7.7.0`, `@prisma/adapter-pg@7.7.0`, `pg@8.20.0`, `@types/pg@8.20.0` all resolved; `pnpm install` clean.
+- **AC2** — Folder layout in place (`apps/api/prisma/schema/{schema,user,file,refresh-token}.prisma`); generator = `prisma-client`, `output = "../../src/prisma/generated"`, `moduleFormat = "cjs"`. Old monolith deleted.
+- **AC3** — `apps/api/src/prisma/generated/` emitted (`client.ts`, `enums.ts`, `models/`, `internal/`), gitignored via `apps/api/.gitignore` (`/src/prisma/generated/`).
+- **AC4** — `prisma migrate deploy` applied `20260104040344_init`; `prisma migrate status` reports "Database schema is up to date!" — zero drift confirmed.
+- **AC5** — `PrismaService` extends the new `PrismaClient` via `@/prisma/generated/client`, constructs `PrismaPg({ connectionString: process.env.DATABASE_URL })`, passes it as `super({ adapter, log })`, preserves all lifecycle hooks and `cleanDatabase` semantics. 6/6 unit tests pass.
+- **AC6** — `grep 'from "@prisma/client"'` in `apps/api/src` returns zero matches. `auth.service.ts:13` updated. `@prisma/adapter-pg` (the npm driver) is the only remaining `@prisma/*` runtime import, which is intentional.
+- **AC7** — `tsc --noEmit`, `pnpm build` (nest build), and jest (7 tests across `app.controller.spec` + `prisma.service.spec`) all exit 0.
+- **AC8** — Neon smoke executed `prisma.$queryRaw\`SELECT 1 AS ok\`` and returned `[{"ok":1}]`. Adapter + pg driver reach the Neon pooled endpoint cleanly.
+
+Scope additions beyond the original story plan, flagged for reviewer awareness:
+1. **`apps/api/prisma.config.ts` (new)** — Prisma 7 requires this for multi-file schema + datasource config.
+2. **Jest `moduleNameMapper` block in `apps/api/package.json`** — path aliases (`@/`, `@modules/`, `@common/`, `@config/`) + `.js`→source translation. Previously unnecessary; now load-bearing for all tests that transitively import through the Prisma-generated code.
+3. **`moduleFormat = "cjs"` on the generator** — required because the NestJS project is CommonJS. Not in the original notes but mandatory for tsc/jest/build to work.
+4. **`url` removed from `schema.prisma` datasource block** — enforced by Prisma 7 validation, the url now lives in `prisma.config.ts`.
+
+Observations for future stories:
+- `pg` emits a deprecation warning about `sslmode=require` being treated as `verify-full` in future pg v9. Non-blocking. Consider adding `uselibpqcompat=true` to `DATABASE_URL` in a later story if we upgrade pg.
+- Existing `@prisma/*` TS path alias (`tsconfig.json`) is now unused by source code (only jest mapper uses it implicitly). Left in place to avoid scope creep; candidate for cleanup later.
+
 ### File List
+
+**Created:**
+- `apps/api/prisma.config.ts`
+- `apps/api/prisma/schema/schema.prisma`
+- `apps/api/prisma/schema/user.prisma`
+- `apps/api/prisma/schema/file.prisma`
+- `apps/api/prisma/schema/refresh-token.prisma`
+- `apps/api/src/prisma/generated/**` (gitignored, emitted by `prisma generate`)
+- `.aped/WORKTREE` (cached worktree mode marker for future invocations)
+
+**Modified:**
+- `apps/api/package.json` — bumped Prisma deps to `^7.7.0`, added `@prisma/adapter-pg`, `pg`, `@types/pg`; added jest `moduleNameMapper` for path aliases + `.js` resolution
+- `apps/api/.gitignore` — replaced `/generated/prisma` with `/src/prisma/generated/`
+- `apps/api/src/prisma/prisma.service.ts` — adapter-based constructor, new import path
+- `apps/api/src/modules/auth/auth.service.ts` — `AuthProvider` now imported from `@/prisma/generated/client`
+- `pnpm-lock.yaml` — regenerated by `pnpm install`
+- `docs/aped/state.yaml` — status flow `pending → ready-for-dev → in-progress → review`
+
+**Deleted:**
+- `apps/api/prisma/schema.prisma` (monolith replaced by folder layout)

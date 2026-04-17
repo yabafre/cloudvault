@@ -10,7 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '@/prisma';
 import { RegisterDto } from './dto';
-import { AuthProvider } from '@prisma/client';
+import { AuthProvider } from '@/prisma/generated/client';
 
 interface GoogleUserData {
   providerId: string;

@@ -1,0 +1,12 @@
+// Prisma schema folder layout (Prisma 7 — GA).
+// See architecture §2.2 Data Layer.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../../src/prisma/generated"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
