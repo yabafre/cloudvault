@@ -301,3 +301,29 @@ No unit tests needed — this is pure type/schema declaration. Verification gate
 - `apps/web/package.json`
 - `package.json` (NODE_ENV=production in build scripts)
 - `docs/aped/state.yaml`
+
+## Review Record
+
+- **Reviewed:** 2026-04-17 (two rounds: 2026-04-16 initial, 2026-04-17 re-review + fixes)
+- **Specialists:** Eva (ac-validator), Marcus (code-quality), Diego (backend), Rex (git-auditor)
+- **Initial findings:** 12 total (3 CRITICAL · 2 HIGH · 4 MEDIUM · 2 LOW · 1 INFO)
+- **Outcome:** All CRITICAL/HIGH/MEDIUM/LOW fixed; 1 INFO finding (pre-existing tsc errors) also resolved per user request
+- **Final commit:** `c56b091` fix(KON-83): address all review findings from 2026-04-16 and 2026-04-17
+- **Verification:** tsc --noEmit clean across @cloudvault/contract, @cloudvault/validators, @cloudvault/api, @cloudvault/web. 3/3 batch-1 specialists APPROVED after re-verification; Rex APPROVED git hygiene.
+
+### Resolved findings
+
+| # | Severity | Scope | Fix |
+|---|---|---|---|
+| 1 | CRITICAL | auth schemas | password `.max(128)` on login + register |
+| 2 | CRITICAL | profile route | PUT aligned on `/profile/me` |
+| 3 | CRITICAL | Prisma drift | `FileStatus` enum + `status` field + index on File model |
+| 4 | HIGH | upload-intent | fileName regex + max(255), mimeType z.enum allowlist, fileSize int/positive/max(10 MB) |
+| 5 | HIGH | files contract | `.output(successOutputSchema)` on delete |
+| 6 | MEDIUM | contract deps | Removed ghost deps `@cloudvault/types`, `@cloudvault/zod` |
+| 7 | MEDIUM | register schema | `name.min(1).max(100).optional()` |
+| 8 | MEDIUM | list-files output | Added `pageSize: z.number()` |
+| 9 | MEDIUM | auth contract | `.output()` on logout + `.input()/.output()` on googleCallback |
+| 10 | LOW | contract shape | Wrapped every module + root in `oc.router({...})` |
+| 11 | LOW | legacy types | Acknowledged — removed in story 2-1 |
+| 12 | INFO (user-requested) | pre-existing tsc | Fixed supertest import, loginAsync/registerAsync destructure, RenderResult annotation |
