@@ -5,7 +5,7 @@ const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const SAFE_ID = 'abcDEF_123-456';
-const SAFE_UUID = '4f1a2b3c-4d5e-6789-abcd-ef0123456789';
+const SAFE_UUID = '4f1a2b3c-4d5e-4789-8bcd-ef0123456789';
 const TOO_SHORT = 'abc123';
 const TOO_LONG = 'a'.repeat(129);
 const INJECTION = "abc123\ninjected=evil";
@@ -75,7 +75,7 @@ describe('RequestIdMiddleware', () => {
   describe('when header is invalid (log-injection hardening)', () => {
     it.each([
       ['empty string', ''],
-      ['below min length (7 chars)', TOO_SHORT],
+      ['below min length (6 chars)', TOO_SHORT],
       ['above max length (129 chars)', TOO_LONG],
       ['newline injection', INJECTION],
       ['contains space', 'abc 1234'],
@@ -105,5 +105,23 @@ describe('RequestIdMiddleware', () => {
       middleware.use(req as Request & { id?: string }, buildRes(), n);
       expect(n).toHaveBeenCalledTimes(1);
     }
+  });
+
+  describe('when req.id is already set (pino-http ran first)', () => {
+    it('preserves the pre-set id and ignores any conflicting incoming header', () => {
+      const preSet = '4f1a2b3c-4d5e-4789-8bcd-ef0123456789';
+      const conflicting = 'should-not-be-used-zzzz';
+      const req = {
+        id: preSet,
+        headers: { 'x-request-id': conflicting },
+      } as unknown as Request & { id?: string };
+      const res = buildRes();
+
+      middleware.use(req, res, next);
+
+      expect(req.id).toBe(preSet);
+      expect(res.setHeader).toHaveBeenCalledWith('x-request-id', preSet);
+      expect(next).toHaveBeenCalledTimes(1);
+    });
   });
 });
