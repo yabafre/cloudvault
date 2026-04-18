@@ -168,6 +168,35 @@ pnpm dev
 - Healthcheck endpoint `/health`
 - Métriques système (CPU, RAM, disque)
 
+## ⚙️ CI/CD
+
+Le repository utilise **GitHub Actions** avec authentification OIDC vers AWS.
+
+### Workflows
+
+- **`.github/workflows/ci.yml`** — déclenché sur chaque pull request et push sur `main`. Exécute `pnpm lint`, `pnpm test`, `pnpm build`, upload la couverture, et lint les workflows avec `actionlint`.
+- **`.github/workflows/deploy.yml`** — déclenché après succès de CI sur `main` ou via `workflow_dispatch`. Contient trois jobs (`deploy-infra`, `deploy-api`, `deploy-lambda`) derrière l'environnement `production` (approbation manuelle GitHub).
+- **`.github/actions/setup-monorepo`** — composite action partagée : pnpm 9, Node 20, install, `prisma generate`.
+
+### Repository secrets requis
+
+| Secret | Statut | Usage |
+|---|---|---|
+| `AWS_ROLE_TO_ASSUME` | **requis** | ARN du rôle IAM assumé via OIDC par les jobs `deploy-*` |
+| `TURBO_TOKEN` | optionnel | Active le cache distant Turborepo (fallback local sans lui) |
+| `TURBO_TEAM` | optionnel | Team slug Turborepo (paire avec `TURBO_TOKEN`) |
+| `VERCEL_TOKEN` | futur | Réservé pour le futur job de déploiement Vercel (frontend) |
+
+### Politique de credentials AWS
+
+**Ne créez jamais de clés IAM long-lived** (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) pour CI. L'authentification est **OIDC-only** :
+
+1. Le provider OIDC GitHub est enregistré dans le compte AWS (`https://token.actions.githubusercontent.com`).
+2. Un rôle IAM avec trust policy restreinte à `repo:<org>/CloudVault-official:ref:refs/heads/main` et `repo:<org>/CloudVault-official:environment:production`.
+3. L'ARN du rôle est exposé via le secret `AWS_ROLE_TO_ASSUME`.
+
+Le bootstrap du provider OIDC et du rôle IAM est suivi dans KON-88 (story 1-7 AWS CDK stacks).
+
 ## 🤝 Contribution
 
 1. Fork le projet

@@ -1,0 +1,32 @@
+name: Setup CloudVault monorepo
+description: Checkout, pnpm 9, Node 20, install, Prisma generate.
+
+# Note on the leading checkout: callers must ALSO have done `actions/checkout@v4`
+# before calling this composite — local action references (`./path`) require the
+# repo to exist on the runner before GitHub can load the action file. This inner
+# checkout is idempotent; it keeps the composite self-contained per the architecture
+# spec so future callers can drop it in without remembering the prerequisite.
+runs:
+  using: composite
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: pnpm
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Generate Prisma client
+      shell: bash
+      env:
+        DATABASE_URL: postgresql://user:pass@localhost:5432/stub
+      run: pnpm db:generate
