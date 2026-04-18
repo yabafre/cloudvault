@@ -32,7 +32,10 @@
     "db:migrate:prod": "dotenv -- pnpm --filter @cloudvault/api exec prisma migrate deploy",
     "db:push": "dotenv -- pnpm --filter @cloudvault/api exec prisma db push",
     "db:studio": "dotenv -- pnpm --filter @cloudvault/api exec prisma studio",
-    "db:reset": "dotenv -- pnpm --filter @cloudvault/api exec prisma migrate reset"
+    "db:reset": "dotenv -- pnpm --filter @cloudvault/api exec prisma migrate reset",
+
+    "cdk:synth": "dotenv -- pnpm --filter @cloudvault/infra exec cdk synth",
+    "cdk:diff": "dotenv -- pnpm --filter @cloudvault/infra exec cdk diff"
   },
   "devDependencies": {
     "@cloudvault/eslint-config": "workspace:*",

@@ -1,0 +1,33 @@
+{
+  "name": "@cloudvault/infra",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AWS CDK infrastructure stacks for CloudVault (eu-west-3)",
+  "license": "MIT",
+  "bin": {
+    "cloudvault-infra": "bin/cloudvault.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf cdk.out dist",
+    "cdk": "cdk",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "test": "jest --passWithNoTests",
+    "lint": "echo 'no lint configured for @cloudvault/infra yet' && exit 0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.167.1",
+    "constructs": "^10.4.2"
+  },
+  "devDependencies": {
+    "@cloudvault/typescript-config": "workspace:*",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.5",
+    "aws-cdk": "^2.173.2",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}

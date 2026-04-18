@@ -6,3 +6,5 @@ packages:
   - 'apps/*'
   # All packages in packages directory
   - 'packages/*'
+  # AWS CDK stacks (TypeScript)
+  - 'infra/*'
