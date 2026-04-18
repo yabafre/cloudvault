@@ -10,6 +10,8 @@ export default defineConfig({
     path: path.join('prisma', 'migrations'),
   },
   datasource: {
-    url: env('DIRECT_URL') || env('DATABASE_URL'),
+    // Nullish coalescing only — an accidentally empty DIRECT_URL must not
+    // silently fall back to the pooled DATABASE_URL (migrate DDL would fail).
+    url: env('DIRECT_URL') ?? env('DATABASE_URL'),
   },
 });
