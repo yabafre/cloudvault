@@ -8,7 +8,6 @@
 			"@modules/*": ["src/modules/*"],
 			"@common/*": ["src/common/*"],
 			"@config/*": ["src/config/*"],
-			"@prisma/*": ["src/prisma/*"],
 			"@test/*": ["test/*"]
 		}
 	},
