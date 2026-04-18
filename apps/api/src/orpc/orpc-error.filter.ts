@@ -15,19 +15,25 @@ import { ThrottlerException } from '@nestjs/throttler';
 import { isApiErrorCode, type ApiErrorCode } from '@cloudvault/types';
 
 type OrpcErrorShape = {
-  defined: true;
   code: ApiErrorCode;
   status: number;
   message?: string;
   data?: unknown;
 };
 
+// Recognize any ORPCError-shaped throw whose `code` is a valid ApiErrorCode
+// and `status` is a real HTTP status. `defined` (oRPC's contract-level typed
+// errors flag) is not required: handlers routinely throw ad-hoc ORPCErrors
+// (e.g. SERVICE_UNAVAILABLE from /health) with defined=false. The
+// isApiErrorCode gate keeps us from ever honoring a third-party error that
+// happens to look like an ORPCError but carries a code outside our union.
 function isOrpcErrorShape(err: unknown): err is OrpcErrorShape {
   if (typeof err !== 'object' || err === null) return false;
   const candidate = err as Record<string, unknown>;
   return (
-    candidate.defined === true &&
     typeof candidate.status === 'number' &&
+    candidate.status >= 400 &&
+    candidate.status < 600 &&
     isApiErrorCode(candidate.code)
   );
 }
@@ -56,8 +62,13 @@ export class OrpcErrorFilter implements ExceptionFilter {
       message: result.message,
     };
 
-    // Never expose arbitrary data on 5xx — internal service context is a leak risk.
-    if (result.data !== undefined && result.status < 500) {
+    // Strip `data` only when the code is INTERNAL_ERROR — that bucket wraps
+    // unknown exceptions where any attached data could leak internal context
+    // (Prisma fragments, credentials, stack traces). Typed errors —
+    // including typed 5xx like SERVICE_UNAVAILABLE — carry schema-defined
+    // data that is safe and sometimes required to surface (e.g. health
+    // probes must expose which dependency failed).
+    if (result.data !== undefined && result.code !== 'INTERNAL_ERROR') {
       body.data = result.data;
     }
 

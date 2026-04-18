@@ -472,3 +472,7 @@ export const uploadIntentSchema = z.object({ ... });
 **ESLint `no-restricted-imports` failing in a component** → You're importing an action or `core/orpc/client` directly. Route it through a custom hook.
 
 **`zod` direct import flagged** → Only `@cloudvault/zod` may import `zod`. Use `import { z } from '@cloudvault/zod';`
+
+**`GET /health` returns `storage: "error"` in local dev** → Expected until story 1-7 provisions the S3 bucket. `StorageHealthIndicator` runs `HeadBucket` with a 1 000 ms `AbortController` timeout; without `AWS_REGION` and `S3_BUCKET_NAME` set, it short-circuits to `"error"` and warns once at boot. When the 1-7 bucket lands, set both env vars and `storage` flips to `"ok"`.
+
+**Public handlers that must bypass the throttler** → Use `@SkipThrottle()` from `@nestjs/throttler` on the handler method (see `health.orpc.ts`). The global 100 req/min/IP `ThrottlerGuard` stays in place; `@SkipThrottle()` is the canonical opt-out for uptime probes, webhooks, and any route that must not 429.

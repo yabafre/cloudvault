@@ -1,18 +1,34 @@
 {
+  "preset": "ts-jest/presets/default-esm",
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
+  "testPathIgnorePatterns": ["<rootDir>/app.e2e-spec.ts"],
+  "extensionsToTreatAsEsm": [".ts"],
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+        "useESM": true,
+        "tsconfig": {
+          "module": "ESNext",
+          "moduleResolution": "Bundler"
+        }
+      }
+    ]
   },
   "moduleNameMapper": {
+    "^(\\.{1,2}/.*)\\.js$": "$1",
+    "^@/(.*)\\.js$": "<rootDir>/../src/$1",
     "^@/(.*)$": "<rootDir>/../src/$1",
+    "^@modules/(.*)\\.js$": "<rootDir>/../src/modules/$1",
     "^@modules/(.*)$": "<rootDir>/../src/modules/$1",
+    "^@common/(.*)\\.js$": "<rootDir>/../src/common/$1",
     "^@common/(.*)$": "<rootDir>/../src/common/$1",
+    "^@config/(.*)\\.js$": "<rootDir>/../src/config/$1",
     "^@config/(.*)$": "<rootDir>/../src/config/$1",
-    "^@test/(.*)$": "<rootDir>/$1",
-    "^(\\.{1,2}/.*)\\.js$": "$1"
+    "^@test/(.*)$": "<rootDir>/$1"
   },
   "setupFiles": ["<rootDir>/../jest.setup.ts"]
 }

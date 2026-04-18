@@ -7,6 +7,7 @@ import { AppService } from './app.service.js';
 import { LoggerModule, RequestIdMiddleware } from '@/common/logger/index.js';
 import { PrismaModule } from '@/prisma/index.js';
 import { AuthModule, JwtAuthGuard } from '@/modules/auth/index.js';
+import { HealthModule } from '@/modules/health/index.js';
 import { OrpcModule } from './orpc/index.js';
 
 @Module({
@@ -19,6 +20,7 @@ import { OrpcModule } from './orpc/index.js';
     LoggerModule,
     PrismaModule,
     OrpcModule,
+    HealthModule,
     AuthModule,
   ],
   controllers: [AppController],
