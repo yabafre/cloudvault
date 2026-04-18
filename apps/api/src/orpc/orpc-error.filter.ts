@@ -12,11 +12,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ThrottlerException } from '@nestjs/throttler';
-import type { ApiErrorCode } from '@cloudvault/types';
+import { isApiErrorCode, type ApiErrorCode } from '@cloudvault/types';
 
 type OrpcErrorShape = {
   defined: true;
-  code: string;
+  code: ApiErrorCode;
   status: number;
   message?: string;
   data?: unknown;
@@ -27,8 +27,8 @@ function isOrpcErrorShape(err: unknown): err is OrpcErrorShape {
   const candidate = err as Record<string, unknown>;
   return (
     candidate.defined === true &&
-    typeof candidate.code === 'string' &&
-    typeof candidate.status === 'number'
+    typeof candidate.status === 'number' &&
+    isApiErrorCode(candidate.code)
   );
 }
 
@@ -55,7 +55,9 @@ export class OrpcErrorFilter implements ExceptionFilter {
       code: result.code,
       message: result.message,
     };
-    if (result.data !== undefined) {
+
+    // Never expose arbitrary data on 5xx — internal service context is a leak risk.
+    if (result.data !== undefined && result.status < 500) {
       body.data = result.data;
     }
 
@@ -65,7 +67,7 @@ export class OrpcErrorFilter implements ExceptionFilter {
   private resolve(exception: unknown): FilterResult {
     if (isOrpcErrorShape(exception)) {
       return {
-        code: exception.code as ApiErrorCode,
+        code: exception.code,
         message: exception.message ?? exception.code,
         status: exception.status,
         data: exception.data,
@@ -121,10 +123,20 @@ export class OrpcErrorFilter implements ExceptionFilter {
     }
 
     if (exception instanceof HttpException) {
+      const status = exception.getStatus();
+      // 5xx → INTERNAL_ERROR (hide details). 4xx unlisted → VALIDATION_ERROR
+      // (generic client-error bucket) with its real status preserved.
+      if (status >= 500) {
+        return {
+          code: 'INTERNAL_ERROR',
+          message: 'Internal server error',
+          status,
+        };
+      }
       return {
-        code: 'INTERNAL_ERROR',
-        message: 'Internal server error',
-        status: exception.getStatus(),
+        code: 'VALIDATION_ERROR',
+        message: exception.message,
+        status,
       };
     }
 
@@ -138,8 +150,20 @@ export class OrpcErrorFilter implements ExceptionFilter {
   private logServerSide(exception: unknown): void {
     if (exception instanceof Error) {
       this.logger.error(exception.stack ?? exception.message);
+      this.logCauseChain(exception);
     } else {
       this.logger.error(`Unhandled non-Error thrown: ${String(exception)}`);
+    }
+  }
+
+  private logCauseChain(error: Error, depth = 0): void {
+    const cause = (error as { cause?: unknown }).cause;
+    if (cause === undefined || depth >= 5) return;
+    if (cause instanceof Error) {
+      this.logger.error(`Caused by (${depth + 1}): ${cause.stack ?? cause.message}`);
+      this.logCauseChain(cause, depth + 1);
+    } else {
+      this.logger.error(`Caused by (${depth + 1}): ${String(cause)}`);
     }
   }
 }

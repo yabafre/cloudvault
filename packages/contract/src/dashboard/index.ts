@@ -1,1 +1,1 @@
-export { dashboardContract } from './dashboard.contract';
+export { dashboardContract } from './dashboard.contract.js';

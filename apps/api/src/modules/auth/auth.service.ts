@@ -10,8 +10,17 @@ import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../../prisma/index.js';
 import { RegisterDto } from './dto/index.js';
-import prismaClient from '@prisma/client';
-const { AuthProvider } = prismaClient;
+import prismaPkg from '@prisma/client';
+
+type PrismaPkg = typeof prismaPkg & { default?: typeof prismaPkg };
+const prismaPkgTyped = prismaPkg as PrismaPkg;
+const AuthProvider =
+  prismaPkgTyped.AuthProvider ?? prismaPkgTyped.default?.AuthProvider;
+if (!AuthProvider) {
+  throw new Error(
+    '[prisma] Could not resolve AuthProvider enum from @prisma/client — check ESM/CJS loader.',
+  );
+}
 
 interface GoogleUserData {
   providerId: string;

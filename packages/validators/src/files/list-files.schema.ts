@@ -1,5 +1,5 @@
 import { z } from '@cloudvault/zod';
-import { paginationSchema } from '../common';
+import { paginationSchema } from '../common/index.js';
 
 export const listFilesSchema = paginationSchema;
 

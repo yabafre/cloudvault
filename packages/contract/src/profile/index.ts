@@ -1,1 +1,1 @@
-export { profileContract } from './profile.contract';
+export { profileContract } from './profile.contract.js';

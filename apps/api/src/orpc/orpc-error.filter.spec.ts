@@ -65,7 +65,7 @@ function orpcErrorLike(overrides: {
 
 describe('OrpcErrorFilter', () => {
   let filter: OrpcErrorFilter;
-  let errorSpy: jest.SpyInstance;
+  let errorSpy: ReturnType<typeof jest.spyOn>;
 
   beforeEach(() => {
     filter = new OrpcErrorFilter();
@@ -178,9 +178,21 @@ describe('OrpcErrorFilter', () => {
     expect(response.status).toHaveBeenCalledWith(
       HttpStatus.INTERNAL_SERVER_ERROR,
     );
-    const body = response.json.mock.calls[0][0];
+    const body = response.json.mock.calls[0][0] as Record<string, unknown>;
     expect(body.code).toBe('INTERNAL_ERROR');
     expect(body.message).not.toBe('database exploded');
+  });
+
+  it('maps a 4xx unlisted HttpException (422) to VALIDATION_ERROR / 422 — not INTERNAL_ERROR', () => {
+    const { host, response } = buildHost();
+    const http422 = new HttpException('bad payload shape', 422);
+
+    filter.catch(http422, host);
+
+    expect(response.status).toHaveBeenCalledWith(422);
+    const body = response.json.mock.calls[0][0] as Record<string, unknown>;
+    expect(body.code).toBe('VALIDATION_ERROR');
+    expect(body.code).not.toBe('INTERNAL_ERROR');
   });
 
   it('maps an unknown Error to INTERNAL_ERROR / 500 and logs it server-side', () => {
@@ -216,8 +228,73 @@ describe('OrpcErrorFilter', () => {
 
     filter.catch(new Error('secret stack'), host);
 
-    const body = response.json.mock.calls[0][0];
+    const body = response.json.mock.calls[0][0] as Record<string, unknown>;
     expect(body).not.toHaveProperty('stack');
     expect(JSON.stringify(body)).not.toContain('secret stack');
+  });
+
+  it('rejects ORPCError-shaped objects with an unknown code — falls through to INTERNAL_ERROR', () => {
+    const { host, response } = buildHost();
+    const impostor = {
+      defined: true,
+      code: 'NETWORK_TIMEOUT', // not in ApiErrorCode union
+      status: 504,
+      message: 'from a third-party library',
+    };
+
+    filter.catch(impostor, host);
+
+    expect(response.status).toHaveBeenCalledWith(
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+    const body = response.json.mock.calls[0][0] as Record<string, unknown>;
+    expect(body.code).toBe('INTERNAL_ERROR');
+    expect(body.code).not.toBe('NETWORK_TIMEOUT');
+  });
+
+  it('strips the data field for 5xx responses — no server-internal context leaks to client', () => {
+    const { host, response } = buildHost();
+    const serverError = {
+      defined: true,
+      code: 'INTERNAL_ERROR' as const,
+      status: 500,
+      message: 'internal',
+      data: { prismaDetail: 'SELECT * FROM users WHERE password=...', userId: 'u_42' },
+    };
+
+    filter.catch(serverError, host);
+
+    const body = response.json.mock.calls[0][0] as Record<string, unknown>;
+    expect(body).not.toHaveProperty('data');
+    expect(JSON.stringify(body)).not.toContain('prismaDetail');
+    expect(JSON.stringify(body)).not.toContain('u_42');
+  });
+
+  it('preserves the data field for 4xx ORPCError-shaped errors', () => {
+    const { host, response } = buildHost();
+    const clientError = {
+      defined: true,
+      code: 'VALIDATION_ERROR' as const,
+      status: 400,
+      message: 'bad',
+      data: { field: 'email' },
+    };
+
+    filter.catch(clientError, host);
+
+    const body = response.json.mock.calls[0][0] as Record<string, unknown>;
+    expect(body.data).toEqual({ field: 'email' });
+  });
+
+  it('logs the chained cause when an unknown Error has Error.cause set', () => {
+    const { host } = buildHost();
+    const rootCause = new Error('db connection refused');
+    const wrapper = new Error('login failed', { cause: rootCause });
+
+    filter.catch(wrapper, host);
+
+    const loggedMessages = errorSpy.mock.calls.map((args) => String(args[0]));
+    expect(loggedMessages.some((msg) => msg.includes('Caused by'))).toBe(true);
+    expect(loggedMessages.some((msg) => msg.includes('db connection refused'))).toBe(true);
   });
 });

@@ -4,8 +4,21 @@ import {
   OnModuleDestroy,
   Logger,
 } from '@nestjs/common';
-import prismaClient from '@prisma/client';
-const { PrismaClient } = prismaClient;
+import prismaPkg from '@prisma/client';
+
+// Defensive ESM/CJS interop: @prisma/client v6 ships dual-resolution, so
+// depending on the loader `prismaPkg` is either `module.exports` directly
+// (CJS via @swc-node/register) or `{ default: module.exports }` (ESM-wrap).
+// Crash loudly with a clear message rather than `class extends undefined`.
+type PrismaPkg = typeof prismaPkg & { default?: typeof prismaPkg };
+const prismaPkgTyped = prismaPkg as PrismaPkg;
+const PrismaClient =
+  prismaPkgTyped.PrismaClient ?? prismaPkgTyped.default?.PrismaClient;
+if (!PrismaClient) {
+  throw new Error(
+    '[prisma] Could not resolve PrismaClient from @prisma/client — check ESM/CJS loader.',
+  );
+}
 
 @Injectable()
 export class PrismaService

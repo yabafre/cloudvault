@@ -12,6 +12,16 @@ import { AppModule } from './app.module.js';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Trust exactly the hops in front of us: Cloudflare → ALB → Fargate task.
+  // Without this, Express's `req.ip` returns the ALB's internal IP and
+  // ThrottlerGuard buckets every request under one key — effectively
+  // no-oping the rate limit (architecture §1.2 defense-in-depth).
+  const httpAdapter = app.getHttpAdapter();
+  const expressInstance = httpAdapter.getInstance?.() as
+    | { set?: (k: string, v: unknown) => void }
+    | undefined;
+  expressInstance?.set?.('trust proxy', 2);
+
   app.use(helmet());
   app.use(cookieParser());
 

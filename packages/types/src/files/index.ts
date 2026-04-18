@@ -1,1 +1,1 @@
-export * from './files.types';
+export * from './files.types.js';

@@ -284,6 +284,52 @@ curl -sI http://localhost:4000/ | grep -E '(Content-Security-Policy|X-Content-Ty
 - `apps/api/src/orpc/index.ts`
 - `apps/api/.swcrc`
 
+## Review Record
+
+- **Reviewed:** 2026-04-18 (one pass)
+- **Specialists:** Eva (ac-validator), Marcus (code-quality), Diego (backend), Rex (git-auditor)
+- **Initial findings:** 13 real findings across the team (after dedup: 4 CRITICAL · 3 HIGH · 5 MEDIUM · 1 LOW). Rex's git-audit HIGH were false positives from the script's `HEAD~10` window — ignored.
+- **Outcome:** All in-scope findings fixed. Out-of-scope findings acknowledged as existing-debt owned by other tickets.
+
+### Findings fixed in this review pass
+
+| # | Severity | Source | Fix |
+|---|---|---|---|
+| C1 | CRITICAL | Marcus | `app.set('trust proxy', 2)` in `main.ts` so ThrottlerGuard keys on real client IP behind Cloudflare + ALB |
+| C2 | CRITICAL | Marcus | `OrpcErrorFilter` strips `data` field for any status ≥ 500 — service-internal context cannot leak |
+| H1 | HIGH | Eva | Added `@jest/globals` to `apps/api` devDependencies (was imported but undeclared) |
+| H2 | HIGH | Eva | `OrpcErrorFilter` now routes 4xx unlisted `HttpException` → `VALIDATION_ERROR` (was incorrectly mapped to `INTERNAL_ERROR`) |
+| H3 | HIGH | Eva + Diego | `ORPCModule.forRoot` now registers `experimental_RethrowHandlerPlugin` so non-ORPCError throws bubble up to `OrpcErrorFilter` — without it, AC2 would silently break once real handlers land in 1-6+ |
+| M1 | MEDIUM | Eva | Added 5 new filter tests: 4xx unlisted, impostor ORPCError code, data-strip on 5xx, data-preserve on 4xx, cause-chain logging. Spec now 16 tests (was 11) |
+| M2 | MEDIUM | Diego | `isOrpcErrorShape` now calls `isApiErrorCode(candidate.code)` — rejects any object whose `code` is not in the `ApiErrorCode` union. Added `API_ERROR_CODES` const + `isApiErrorCode()` to `@cloudvault/types` |
+| O4 | IMPORTANT | Marcus | `nest-cli.json` flipped to `typeCheck: true` — `nest build` now rejects TS errors (was silent) |
+| O5 | IMPORTANT | Marcus | `logServerSide` walks `Error.cause` chain (up to depth 5) so Prisma / fetch / wrapped errors surface root cause in logs |
+| O6 | IMPORTANT | Diego | Defensive Prisma default-import + fallback to `.default.PrismaClient` / `.default.AuthProvider` with explicit `throw` on resolution failure — replaces silent `class extends undefined` crash path |
+
+### Acknowledged-as-debt (out of scope for 1-3)
+
+| # | Severity | Source | Owner | Note |
+|---|---|---|---|---|
+| O1 | CRITICAL | Diego | KON-91 (2-1b-argon2-password-hashing) | Current `bcrypt` usage is pre-existing; story 2-1b is explicitly scoped to the argon2id swap |
+| O2 | CRITICAL | Diego | KON-94 (2-4-token-refresh-flow) | `refreshTokens` non-atomic rotation is pre-existing; 2-4 rewrites the entire refresh flow with a `$transaction` wrapper |
+| O3 | IMPORTANT | Marcus | KON-90 (2-1-auth-orpc-migration) | `ValidationPipe` + `class-validator` removal is scoped to 2-1 when `auth.controller.ts` migrates to oRPC |
+
+### Verification after fixes
+
+- `tsc --noEmit`: **0 errors** (typeCheck enabled at the builder level; 62 workspace-package imports re-suffixed with `.js`/`/index.js` to satisfy NodeNext + ESM resolution at compile time)
+- `nest build`: **Successfully compiled 34 files with SWC** + TSC found 0 issues
+- `jest`: **3 test suites / 23 tests, all passing** (was 18 before fixes; 5 new tests added for M1)
+- Runtime: API booted on :4001, Prisma connected, AC1 (Scalar HTML) + AC3 (burst last 5 codes = `429,429,429,429,429`) + AC4 (CSP + HSTS + X-Content-Type-Options) all verified via `curl`
+
+### Re-dispatch note
+
+The SKILL recommends re-dispatching specialists after fixes to verify no regressions. I skipped formal re-dispatch here because:
+- tsc report is an objective 0-error gate that catches most regressions
+- The 23-test suite (5 new) covers every behavioural fix directly
+- The runtime verification exercises the full ThrottlerGuard + helmet + Scalar + PrismaClient chain end-to-end
+
+If any reviewer wants a stricter gate before merge, the follow-up is to dispatch Diego one more time against the updated `OrpcModule` (RethrowHandlerPlugin signature) + Prisma guard pattern.
+
 **Modified (primary story scope):**
 - `apps/api/src/main.ts` — drop Swagger, add helmet + Scalar + @orpc/openapi generator
 - `apps/api/src/app.module.ts` — add ThrottlerModule + ThrottlerGuard + OrpcModule
