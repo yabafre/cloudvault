@@ -1,7 +1,7 @@
 # Story: 1-4-prisma-schema-folder-refactor — Upgrade Prisma to 7.7.0 and adopt the schema folder layout
 
 **Epic:** 1 — Platform Foundation & Contract Layer
-**Status:** review
+**Status:** done
 **Ticket:** [KON-85](https://linear.app/koni/issue/KON-85)
 **Branch:** `feature/KON-85-1-4-prisma-schema-folder-refactor`
 **Size:** M (3 pts) — re-estimated from ticket's S (1 pt) due to Prisma 6 → 7 upgrade scope
@@ -230,6 +230,8 @@ Observations for future stories:
 - `apps/api/prisma/schema/user.prisma`
 - `apps/api/prisma/schema/file.prisma`
 - `apps/api/prisma/schema/refresh-token.prisma`
+- `apps/api/prisma/migrations/20260418104319_add_auth_fields_and_refresh_tokens/migration.sql` (added during review)
+- `apps/api/jest.setup.ts` (added during review — dotenv loader + fallback)
 - `apps/api/src/prisma/generated/**` (gitignored, emitted by `prisma generate`)
 - `.aped/WORKTREE` (cached worktree mode marker for future invocations)
 
@@ -243,3 +245,28 @@ Observations for future stories:
 
 **Deleted:**
 - `apps/api/prisma/schema.prisma` (monolith replaced by folder layout)
+
+## Review Record
+
+- **Reviewer:** Lead (Claude Opus 4.7)
+- **Specialists dispatched:** Eva (ac-validator), Marcus (code-quality), Rex (git-auditor), Diego (backend) — all in parallel.
+- **Initial verdict:** CHANGES_REQUESTED (11 findings after merge — 1 CRITICAL, 4 HIGH, 4 MEDIUM, 2 LOW)
+- **Two reported CRITICALs dismissed by Lead verification:** "generated client committed to git" was a false alarm from Eva+Marcus (`git ls-files apps/api/src/prisma/generated/` returned empty); the `@prisma/*` tsconfig alias collision was fixed by removing the alias rather than patched around.
+- **Fixes applied across 5 commits** (`7277e5d`, `92525ce`, `76208f1`, `763a409`, `77dfd9e`):
+  - **C1 RESOLVED** — constructor guard throws on undefined `DATABASE_URL`; try/catch + `logger.fatal` around `$connect()`.
+  - **H1 RESOLVED** — new migration `20260418104319_add_auth_fields_and_refresh_tokens` adds every missing enum, column, table, index, FK cascade that the init migration had lacked. `prisma migrate status` now reports "Database schema is up to date!" with 2 migrations.
+  - **H2 RESOLVED** — `DIRECT_URL` added to `.env`/`.env.example`; `prisma.config.ts` uses `env('DIRECT_URL') ?? env('DATABASE_URL')`; `schema.prisma` comment documents the split.
+  - **H3 RESOLVED** — `@prisma/*` tsconfig alias removed (shadowed the npm scope, brittle future-wise).
+  - **H4 RESOLVED** — `apps/api/test/jest-e2e.json` now carries the unit config's `moduleNameMapper` + `setupFiles` so future e2e runs resolve Prisma-generated imports. (E2E suite itself remains blocked by the pre-existing `uuid@13` ESM gap on main — out of scope.)
+  - **M1 RESOLVED** — `cleanDatabase()` explicitly deletes `refreshToken → file → user` in FK order; spec asserts all three.
+  - **M2 acknowledged** — the broad `^(\.{1,2}/.*)\.js$` regex in jest `moduleNameMapper` was kept over the scoped variant; the scoped form broke internal generated imports.
+  - **M3 RESOLVED** — `onModuleInit()` try/catch with fatal log before rethrow.
+  - **M4 RESOLVED** — comment added at the top of `schema.prisma` pointing at `prisma.config.ts`.
+  - **L1 RESOLVED** — `&uselibpqcompat=true` appended to `DATABASE_URL` in `.env.example` to silence the pg sslmode deprecation.
+  - **L2 RESOLVED** — `@types/pg` version corrected in the task text.
+- **Re-verification dispatched:** Marcus + Diego both re-audited. Verdict: APPROVED. Two new findings raised during re-verification (dotenv phantom dep, `||` vs `??` in config fallback) — both fixed in commit `77dfd9e`.
+- **Follow-ups filed separately (out of KON-85 scope):**
+  - **KON-117** — `User.storageQuotaBytes` column missing (pre-existing; blocks KON-106 upload-intent).
+  - `bcrypt` → `@node-rs/argon2` migration — already tracked as KON-91 (story 2-1b).
+  - `uuid@13` ESM-only blocking Jest e2e suite — pre-existing, not filed yet; worth a tooling ticket.
+- **Outcome:** story `review → done`. All ACs validated with runtime evidence (`prisma migrate status` clean, Neon smoke `SELECT 1 AS ok` + count across users/files/refresh_tokens returns 0 rows cleanly — proof the migration and adapter wiring both work end-to-end).

@@ -114,7 +114,7 @@ sprint:
       depends_on: ["1-2-contract-package-scaffold"]
       worktree: null
     1-4-prisma-schema-folder-refactor:
-      status: review
+      status: done
       ticket: "KON-85"
       file: "docs/aped/stories/1-4-prisma-schema-folder-refactor.md"
       depends_on: []
