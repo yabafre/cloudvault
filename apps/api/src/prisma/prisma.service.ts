@@ -15,9 +15,14 @@ export class PrismaService
   private readonly logger = new Logger(PrismaService.name);
 
   constructor() {
-    const adapter = new PrismaPg({
-      connectionString: process.env.DATABASE_URL as string,
-    });
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error(
+        'DATABASE_URL is not set. Cannot initialise PrismaService.',
+      );
+    }
+
+    const adapter = new PrismaPg({ connectionString });
 
     super({
       adapter,
@@ -30,8 +35,14 @@ export class PrismaService
 
   async onModuleInit() {
     this.logger.log('Connecting to database...');
-    await this.$connect();
-    this.logger.log('Database connection established');
+    try {
+      await this.$connect();
+      this.logger.log('Database connection established');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.fatal(`Database connection failed: ${message}`);
+      throw err;
+    }
   }
 
   async onModuleDestroy() {
@@ -48,7 +59,9 @@ export class PrismaService
       throw new Error('Cannot clean database in production');
     }
 
-    // Delete in order respecting foreign key constraints
+    // Delete in FK order (children before parents) — explicit rather than
+    // relying on Cascade so new non-cascading models surface loudly.
+    await this.refreshToken.deleteMany();
     await this.file.deleteMany();
     await this.user.deleteMany();
   }

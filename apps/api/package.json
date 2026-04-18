@@ -93,6 +93,9 @@
       "^@config/(.*)$": "<rootDir>/config/$1",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
+    "setupFiles": [
+      "<rootDir>/../jest.setup.ts"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
