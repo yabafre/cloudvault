@@ -127,10 +127,11 @@ sprint:
       depends_on: []
       worktree: null
     1-6-health-endpoint:
-      status: pending
+      status: ready-for-dev
       ticket: "KON-87"
+      file: "docs/aped/stories/1-6-health-endpoint.md"
       depends_on: ["1-3-orpc-nest-adapter"]
-      worktree: null
+      worktree: "../CloudVault-official__worktrees/feature-kon-87-1-6-health-endpoint"
     1-7-aws-cdk-stacks:
       status: pending
       ticket: "KON-88"
