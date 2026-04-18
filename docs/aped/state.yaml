@@ -132,8 +132,9 @@ sprint:
       depends_on: ["1-3-orpc-nest-adapter"]
       worktree: null
     1-7-aws-cdk-stacks:
-      status: pending
+      status: ready-for-dev
       ticket: "KON-88"
+      file: "docs/aped/stories/1-7-aws-cdk-stacks.md"
       depends_on: []
       worktree: null
     1-8-github-actions-ci-cd:
