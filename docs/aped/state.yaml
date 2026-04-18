@@ -119,7 +119,7 @@ sprint:
       depends_on: []
       worktree: null
     1-5-logging-and-request-id:
-      status: review
+      status: done
       ticket: "KON-86"
       file: "docs/aped/stories/1-5-logging-and-request-id.md"
       depends_on: []
