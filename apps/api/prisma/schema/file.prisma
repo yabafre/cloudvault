@@ -1,0 +1,34 @@
+// === FILE STATUS ENUM ===
+// PENDING: upload intent issued, awaiting S3 confirmation
+// READY: file uploaded + thumbnail generated
+// FAILED: upload or thumbnail generation failed
+enum FileStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+// === FILE MODEL ===
+// Represents a file stored in S3
+model File {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  s3Key        String   @unique
+  s3Url        String
+  thumbnailKey String?
+  thumbnailUrl String?
+  status       FileStatus @default(PENDING)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([s3Key])
+  @@index([status])
+  @@index([createdAt])
+  @@map("files")
+}

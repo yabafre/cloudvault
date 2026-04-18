@@ -64,6 +64,9 @@ describe('PrismaService', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
 
+      const refreshTokenDeleteSpy = jest
+        .spyOn(service.refreshToken, 'deleteMany')
+        .mockResolvedValue({ count: 0 });
       const fileDeleteSpy = jest
         .spyOn(service.file, 'deleteMany')
         .mockResolvedValue({ count: 0 });
@@ -73,6 +76,7 @@ describe('PrismaService', () => {
 
       await service.cleanDatabase();
 
+      expect(refreshTokenDeleteSpy).toHaveBeenCalled();
       expect(fileDeleteSpy).toHaveBeenCalled();
       expect(userDeleteSpy).toHaveBeenCalled();
 

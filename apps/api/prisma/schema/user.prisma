@@ -1,0 +1,27 @@
+// === AUTH PROVIDER ENUM ===
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+// === USER MODEL ===
+// Represents a user of the CloudVault platform
+model User {
+  id            String       @id @default(uuid())
+  email         String       @unique
+  password      String?      // Nullable for OAuth users
+  name          String?
+  avatar        String?
+  provider      AuthProvider @default(LOCAL)
+  providerId    String?      // Google ID, etc.
+  emailVerified Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  files         File[]
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+  @@index([provider, providerId])
+  @@map("users")
+}
