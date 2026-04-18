@@ -137,8 +137,9 @@ sprint:
       depends_on: []
       worktree: null
     1-8-github-actions-ci-cd:
-      status: pending
+      status: ready-for-dev
       ticket: "KON-89"
+      file: "docs/aped/stories/1-8-github-actions-ci-cd.md"
       depends_on: []
       worktree: null
     2-1-auth-orpc-migration:
