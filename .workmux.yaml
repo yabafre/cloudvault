@@ -2,17 +2,19 @@
 # Docs: https://workmux.raine.dev/
 
 panes:
-  - command: <agent>
+  - command: <agent> --dangerously-skip-permissions
     focus: true
 
-# Only gitignored files — tracked files are already in the worktree via git checkout.
-# .mcp.json is critical so /aped-story can reach the Linear MCP server.
-# .claude/settings.local.json shares permission allowances across worktrees.
+# Gitignored files must be copied — tracked files already land via git checkout.
+# `.claude/` and `.aped/` are fully copied because both are gitignored in this
+# project; without them the worktree's Claude session fails on the first prompt
+# (UserPromptSubmit hook → `.aped/hooks/guardrail.sh`).
 files:
   copy:
     - .env*
     - .mcp.json
-    - .claude/settings.local.json
+    - .claude/
+    - .aped/
   symlink:
     - node_modules
 

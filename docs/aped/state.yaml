@@ -109,20 +109,23 @@ sprint:
       depends_on: ["1-1-zod-validators-packages"]
       worktree: null
     1-3-orpc-nest-adapter:
-      status: pending
+      status: done
       ticket: "KON-84"
+      file: "docs/aped/stories/1-3-orpc-nest-adapter.md"
       depends_on: ["1-2-contract-package-scaffold"]
-      worktree: null
+      worktree: "/Users/fredyaba/Documents/Saas-projects/CloudVault-official__worktrees/feature-kon-84-1-3-orpc-nest-adapter"
     1-4-prisma-schema-folder-refactor:
-      status: pending
+      status: done
       ticket: "KON-85"
+      file: "docs/aped/stories/1-4-prisma-schema-folder-refactor.md"
       depends_on: []
-      worktree: null
+      worktree: "/Users/fredyaba/Documents/Saas-projects/CloudVault-official__worktrees/feature-kon-85-1-4-prisma-schema-folder-refactor"
     1-5-logging-and-request-id:
-      status: pending
+      status: done
       ticket: "KON-86"
+      file: "docs/aped/stories/1-5-logging-and-request-id.md"
       depends_on: []
-      worktree: null
+      worktree: "/Users/fredyaba/Documents/Saas-projects/CloudVault-official__worktrees/feature-kon-86-1-5-logging-and-request-id"
     1-6-health-endpoint:
       status: pending
       ticket: "KON-87"
