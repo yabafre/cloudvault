@@ -1,1 +1,1 @@
-export { healthContract } from './health.contract';
+export { healthContract } from './health.contract.js';

@@ -1,2 +1,2 @@
-export * from './pagination.schema';
-export * from './success.schema';
+export * from './pagination.schema.js';
+export * from './success.schema.js';

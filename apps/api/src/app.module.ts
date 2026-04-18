@@ -15,16 +15,14 @@ import { AuthModule, JwtAuthGuard } from '@/modules/auth';
     }),
     LoggerModule,
     PrismaModule,
+    OrpcModule,
     AuthModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    // Global JWT guard - use @Public() decorator to bypass
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
 export class AppModule implements NestModule {

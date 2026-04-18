@@ -1,1 +1,1 @@
-export { filesContract } from './files.contract';
+export { filesContract } from './files.contract.js';

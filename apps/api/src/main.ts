@@ -11,10 +11,19 @@ async function bootstrap() {
 
   const logger = new Logger('Bootstrap');
 
-  // Cookie parser middleware for reading cookies
+  // Trust exactly the hops in front of us: Cloudflare → ALB → Fargate task.
+  // Without this, Express's `req.ip` returns the ALB's internal IP and
+  // ThrottlerGuard buckets every request under one key — effectively
+  // no-oping the rate limit (architecture §1.2 defense-in-depth).
+  const httpAdapter = app.getHttpAdapter();
+  const expressInstance = httpAdapter.getInstance?.() as
+    | { set?: (k: string, v: unknown) => void }
+    | undefined;
+  expressInstance?.set?.('trust proxy', 2);
+
+  app.use(helmet());
   app.use(cookieParser());
 
-  // CORS configuration
   app.enableCors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
@@ -23,29 +32,27 @@ async function bootstrap() {
     exposedHeaders: ['X-Request-Id'],
   });
 
-  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Strip properties not in DTO
-      forbidNonWhitelisted: true, // Throw error if extra properties
-      transform: true, // Transform payloads to DTO instances
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
 
-  // Swagger configuration
-  const config = new DocumentBuilder()
-    .setTitle('CloudVault API')
-    .setDescription('API de stockage cloud securise')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .addTag('auth', 'Authentication endpoints')
-    .build();
+  const openApiGenerator = new OpenAPIGenerator({
+    schemaConverters: [new ZodToJsonSchemaConverter()],
+  });
+  const spec = await openApiGenerator.generate(contract, {
+    info: {
+      title: 'CloudVault API',
+      version: '1.0.0',
+      description: 'Privacy-first cloud storage — oRPC contract',
+    },
+  });
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  app.use('/api/docs', apiReference({ content: spec }));
 
   const port = process.env.API_PORT ?? 4000;
   await app.listen(port);
@@ -53,4 +60,5 @@ async function bootstrap() {
   logger.log(`Application running on: http://localhost:${port}`);
   logger.log(`Swagger docs: http://localhost:${port}/api/docs`);
 }
-bootstrap();
+
+void bootstrap();

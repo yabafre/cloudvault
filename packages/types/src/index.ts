@@ -1,9 +1,9 @@
 // Feature-scoped re-exports
-export * from './common';
-export * from './auth';
-export * from './files';
-export * from './profile';
-export * from './dashboard';
+export * from './common/index.js';
+export * from './auth/index.js';
+export * from './files/index.js';
+export * from './profile/index.js';
+export * from './dashboard/index.js';
 
 // ============================================================================
 // Legacy types — backward compatibility (remove in story 2-1)

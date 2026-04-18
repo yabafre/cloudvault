@@ -1,5 +1,5 @@
 import { z } from '@cloudvault/zod';
-import { userSchema, tokensSchema } from './login.schema';
+import { userSchema, tokensSchema } from './login.schema.js';
 
 export const registerSchema = z.object({
   email: z.email(),
