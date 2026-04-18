@@ -1,4 +1,6 @@
 // Prisma schema folder layout (Prisma 7 — GA).
+// Datasource url / directUrl are injected via `apps/api/prisma.config.ts`
+// because Prisma 7 no longer accepts `url` inside the datasource block.
 // See architecture §2.2 Data Layer.
 
 generator client {
