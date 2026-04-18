@@ -54,7 +54,7 @@
 
 ## Tasks
 
-- [x] Bump `apps/api/package.json`: `prisma` → `^7.7.0`, `@prisma/client` → `^7.7.0`; add runtime deps `@prisma/adapter-pg` (^7.7.0) and `pg` (^8.13.0); add devDependency `@types/pg` (^8.11.0); run `pnpm install` [AC1]
+- [x] Bump `apps/api/package.json`: `prisma` → `^7.7.0`, `@prisma/client` → `^7.7.0`; add runtime deps `@prisma/adapter-pg` (^7.7.0) and `pg` (^8.20.0); add devDependency `@types/pg` (^8.20.0); run `pnpm install` [AC1]
 - [x] Create `apps/api/prisma/schema/schema.prisma` with the datasource block (`provider = "postgresql"`, `url = env("DATABASE_URL")`) and the generator block (`provider = "prisma-client"`, `output = "../../src/prisma/generated"`) — no preview flags [AC2]
 - [x] Create `apps/api/prisma/schema/user.prisma` with the `User` model (unchanged columns, indexes, `@@map("users")`) and the `AuthProvider` enum [AC2]
 - [x] Create `apps/api/prisma/schema/file.prisma` with the `File` model (unchanged columns, indexes, `@@map("files")`) and the `FileStatus` enum [AC2]
