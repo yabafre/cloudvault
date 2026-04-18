@@ -1,4 +1,4 @@
-import { scrubUrl } from './scrub-url';
+import { scrubUrl } from './scrub-url.js';
 
 describe('scrubUrl', () => {
   it('returns undefined input unchanged', () => {

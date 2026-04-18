@@ -1,5 +1,5 @@
-export { LoggerModule } from './logger.module';
-export { RequestIdMiddleware } from './request-id.middleware';
-export { resolveRequestId } from './request-id.util';
-export { scrubUrl } from './scrub-url';
+export { LoggerModule } from './logger.module.js';
+export { RequestIdMiddleware } from './request-id.middleware.js';
+export { resolveRequestId } from './request-id.util.js';
+export { scrubUrl } from './scrub-url.js';
 export { REQUEST_ID_HEADER } from '@cloudvault/types';

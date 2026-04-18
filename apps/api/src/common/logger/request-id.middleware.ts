@@ -1,7 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { REQUEST_ID_HEADER } from '@cloudvault/types';
 import type { NextFunction, Request, Response } from 'express';
-import { resolveRequestId } from './request-id.util';
+import { resolveRequestId } from './request-id.util.js';
 
 /**
  * Mirrors the request id onto the response header.

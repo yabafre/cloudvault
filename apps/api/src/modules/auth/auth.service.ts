@@ -8,9 +8,9 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import { PrismaService } from '@/prisma';
-import { RegisterDto } from './dto';
-import { AuthProvider } from '@/prisma/generated/client';
+import { PrismaService } from '@/prisma/index.js';
+import { RegisterDto } from './dto/index.js';
+import { AuthProvider } from '@/prisma/generated/client.js';
 
 interface GoogleUserData {
   providerId: string;

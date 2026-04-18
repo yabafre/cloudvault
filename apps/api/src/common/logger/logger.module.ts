@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { resolveRequestId } from './request-id.util';
-import { scrubUrl } from './scrub-url';
+import { resolveRequestId } from './request-id.util.js';
+import { scrubUrl } from './scrub-url.js';
 
 type AuthenticatedRequest = IncomingMessage & {
   id?: string;
