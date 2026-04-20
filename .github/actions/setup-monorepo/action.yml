@@ -1,0 +1,30 @@
+name: Setup CloudVault monorepo
+description: >-
+  pnpm 9, Node (from package.json engines.node), install, Prisma generate.
+  Callers MUST run actions/checkout BEFORE invoking this composite —
+  local action references (`./path`) require the repo on the runner
+  so GitHub can load the action file.
+runs:
+  using: composite
+  steps:
+    # pnpm/action-setup MUST precede actions/setup-node — setup-node with
+    # cache: pnpm calls `pnpm store path` internally, so the pnpm binary
+    # has to be on PATH before setup-node runs. Do not reorder.
+    - name: Setup pnpm
+      uses: pnpm/action-setup@0c17529a66aca453f9227af23103ed11469b1e47 # v4.0.0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+      with:
+        node-version-file: package.json
+        cache: pnpm
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Generate Prisma client
+      shell: bash
+      env:
+        DATABASE_URL: postgresql://user:pass@localhost:5432/stub
+      run: pnpm db:generate

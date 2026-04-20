@@ -4,7 +4,7 @@
 
 ## 🎯 Objectifs du projet
 
-- Maîtriser les services AWS (S3, Lambda, EC2)
+- Maîtriser les services AWS (S3, Lambda, ECS Fargate)
 - Implémenter une stack TypeScript moderne (NestJS + Next.js)
 - Gérer un monorepo avec Turborepo et pnpm
 - Mettre en place un pipeline CI/CD professionnel
@@ -30,10 +30,10 @@
 - Tailwind CSS
 
 **Infrastructure**
-- AWS S3 (stockage fichiers)
-- AWS Lambda (traitement asynchrone Python)
-- AWS EC2 (hébergement API)
-- PostgreSQL (base de données)
+- AWS S3 eu-west-3 (stockage fichiers, SSE-S3, pre-signed POST)
+- AWS Lambda (traitement asynchrone Python — thumbnails Pillow)
+- AWS ECS Fargate eu-west-3 (hébergement API NestJS)
+- PostgreSQL (Neon EU, via Prisma 7)
 - Cloudflare (DNS, CDN, WAF)
 - Docker & Docker Compose
 
@@ -146,12 +146,16 @@ docker-compose -f infra/docker-compose.yml up -d
 pnpm dev
 ```
 
-### Production (EC2)
+### Production (ECS Fargate eu-west-3)
 
-```
-# Voir infra/scripts/deploy.sh
-./infra/scripts/deploy.sh
-```
+Le déploiement passe par GitHub Actions (`.github/workflows/deploy.yml`) :
+
+- trigger : succès CI sur `main` ou `workflow_dispatch` depuis `main` uniquement
+- gate : environnement GitHub `production` (approbation manuelle obligatoire)
+- auth : OIDC vers AWS via `aws-actions/configure-aws-credentials` (SHA-pinned, aucune clé IAM long-lived)
+- 3 jobs parallèles : `deploy-infra` (CDK), `deploy-api` (Fargate), `deploy-lambda`
+
+Le bootstrap du provider OIDC + rôle IAM est suivi dans KON-88 (story 1-7).
 
 ## 🔐 Sécurité
 
@@ -167,6 +171,39 @@ pnpm dev
 - Logs CloudWatch (Lambda)
 - Healthcheck endpoint `/health`
 - Métriques système (CPU, RAM, disque)
+
+## ⚙️ CI/CD
+
+Le repository utilise **GitHub Actions** avec authentification OIDC vers AWS.
+
+### Workflows
+
+- **`.github/workflows/ci.yml`** — déclenché sur chaque pull request et push sur `main`. Exécute `pnpm lint`, `pnpm test`, `pnpm build`, upload la couverture, et lint les workflows avec `actionlint`.
+- **`.github/workflows/deploy.yml`** — déclenché après succès de CI sur `main` ou via `workflow_dispatch`. Contient trois jobs (`deploy-infra`, `deploy-api`, `deploy-lambda`) derrière l'environnement `production` (approbation manuelle GitHub).
+- **`.github/actions/setup-monorepo`** — composite action partagée : pnpm 9 (depuis `packageManager` du `package.json`), Node (depuis `engines.node`), install, `prisma generate`. Toutes les actions tierces sont SHA-pinned.
+
+### Repository secrets requis
+
+| Secret | Statut | Usage |
+|---|---|---|
+| `AWS_ROLE_TO_ASSUME` | **requis** | ARN du rôle IAM assumé via OIDC par les jobs `deploy-*` |
+| `TURBO_TOKEN` | optionnel | Active le cache distant Turborepo (fallback local sans lui) |
+| `TURBO_TEAM` | optionnel | Team slug Turborepo (paire avec `TURBO_TOKEN`) |
+| `VERCEL_TOKEN` | futur | Réservé pour le futur job de déploiement Vercel (frontend) |
+
+> **Permissions requises côté job.** Chaque job `deploy-*` doit déclarer `permissions: { id-token: write, contents: read }` pour que l'échange de token OIDC fonctionne. Déjà configuré dans `deploy.yml` — à préserver dans tout nouveau job de déploiement.
+>
+> **Required reviewers.** L'environnement GitHub `production` DOIT être configuré avec au moins un required reviewer (Settings → Environments → production). Sans reviewers, `workflow_dispatch` devient une porte ouverte sur la prod.
+
+### Politique de credentials AWS
+
+**Ne créez jamais de clés IAM long-lived** (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) pour CI. L'authentification est **OIDC-only** :
+
+1. Le provider OIDC GitHub est enregistré dans le compte AWS (`https://token.actions.githubusercontent.com`).
+2. Un rôle IAM avec trust policy restreinte à `repo:<org>/CloudVault-official:ref:refs/heads/main` et `repo:<org>/CloudVault-official:environment:production`.
+3. L'ARN du rôle est exposé via le secret `AWS_ROLE_TO_ASSUME`.
+
+Le bootstrap du provider OIDC et du rôle IAM est suivi dans KON-88 (story 1-7 AWS CDK stacks).
 
 ## 🤝 Contribution
 
