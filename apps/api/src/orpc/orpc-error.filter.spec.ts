@@ -43,10 +43,13 @@ function buildHost(): { host: ArgumentsHost; response: ResponseMock } {
 }
 
 /**
- * Builds a plain object that duck-types as an ORPCError (the @orpc/server class
- * is ESM-only; importing it in a CommonJS jest test runtime deadlocks ts-jest).
- * The filter treats any object with `{ defined: true, code: string, status: number }`
- * as an oRPC-originated error — matching the wire contract from @orpc/server.
+ * Builds an Error instance that duck-types as an ORPCError (the @orpc/server
+ * class is ESM-only; importing it in a CommonJS jest test runtime deadlocks
+ * ts-jest). The filter treats any `Error` carrying `{ code: ApiErrorCode,
+ * status: number }` as an oRPC-originated error — matching the shape of
+ * `new ORPCError(...)` instances. The `instanceof Error` gate in
+ * `isOrpcErrorShape` blocks plain-object imposters, so fixtures must extend
+ * Error too.
  */
 function orpcErrorLike(overrides: {
   code: string;
@@ -54,13 +57,15 @@ function orpcErrorLike(overrides: {
   message?: string;
   data?: unknown;
 }) {
-  return {
-    defined: true,
-    code: overrides.code,
-    status: overrides.status,
-    message: overrides.message ?? overrides.code,
-    data: overrides.data,
+  const err = new Error(overrides.message ?? overrides.code) as Error & {
+    code: string;
+    status: number;
+    data?: unknown;
   };
+  err.code = overrides.code;
+  err.status = overrides.status;
+  err.data = overrides.data;
+  return err;
 }
 
 describe('OrpcErrorFilter', () => {
@@ -233,14 +238,13 @@ describe('OrpcErrorFilter', () => {
     expect(JSON.stringify(body)).not.toContain('secret stack');
   });
 
-  it('rejects ORPCError-shaped objects with an unknown code — falls through to INTERNAL_ERROR', () => {
+  it('rejects ORPCError-shaped errors with an unknown code — falls through to INTERNAL_ERROR', () => {
     const { host, response } = buildHost();
-    const impostor = {
-      defined: true,
+    const impostor = orpcErrorLike({
       code: 'NETWORK_TIMEOUT', // not in ApiErrorCode union
       status: 504,
       message: 'from a third-party library',
-    };
+    });
 
     filter.catch(impostor, host);
 
@@ -252,15 +256,36 @@ describe('OrpcErrorFilter', () => {
     expect(body.code).not.toBe('NETWORK_TIMEOUT');
   });
 
-  it('strips the data field for 5xx responses — no server-internal context leaks to client', () => {
+  it('rejects plain-object imposters even when they carry a valid ApiErrorCode — isOrpcErrorShape requires instanceof Error', () => {
     const { host, response } = buildHost();
-    const serverError = {
-      defined: true,
-      code: 'INTERNAL_ERROR' as const,
+    // A third-party lib throws a plain object with a leak-y message. The
+    // code and status would pass the shape gate, but the instanceof Error
+    // guard blocks the plain object so exception.message is never forwarded.
+    const plainImpostor = {
+      code: 'VALIDATION_ERROR',
+      status: 400,
+      message: 'constraint violation on column password_hash',
+      data: {},
+    };
+
+    filter.catch(plainImpostor, host);
+
+    expect(response.status).toHaveBeenCalledWith(
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+    const body = response.json.mock.calls[0][0] as Record<string, unknown>;
+    expect(body.code).toBe('INTERNAL_ERROR');
+    expect(JSON.stringify(body)).not.toContain('password_hash');
+  });
+
+  it('strips the data field when the code is INTERNAL_ERROR — unknown exceptions may carry internals', () => {
+    const { host, response } = buildHost();
+    const serverError = orpcErrorLike({
+      code: 'INTERNAL_ERROR',
       status: 500,
       message: 'internal',
       data: { prismaDetail: 'SELECT * FROM users WHERE password=...', userId: 'u_42' },
-    };
+    });
 
     filter.catch(serverError, host);
 
@@ -270,15 +295,31 @@ describe('OrpcErrorFilter', () => {
     expect(JSON.stringify(body)).not.toContain('u_42');
   });
 
+  it('preserves the data field for a typed 5xx (SERVICE_UNAVAILABLE) — schema-defined data is safe and required', () => {
+    const { host, response } = buildHost();
+    const degraded = orpcErrorLike({
+      code: 'SERVICE_UNAVAILABLE',
+      status: 503,
+      message: 'degraded',
+      data: { database: 'error', storage: 'ok' },
+    });
+
+    filter.catch(degraded, host);
+
+    expect(response.status).toHaveBeenCalledWith(503);
+    const body = response.json.mock.calls[0][0] as Record<string, unknown>;
+    expect(body.code).toBe('SERVICE_UNAVAILABLE');
+    expect(body.data).toEqual({ database: 'error', storage: 'ok' });
+  });
+
   it('preserves the data field for 4xx ORPCError-shaped errors', () => {
     const { host, response } = buildHost();
-    const clientError = {
-      defined: true,
-      code: 'VALIDATION_ERROR' as const,
+    const clientError = orpcErrorLike({
+      code: 'VALIDATION_ERROR',
       status: 400,
       message: 'bad',
       data: { field: 'email' },
-    };
+    });
 
     filter.catch(clientError, host);
 
