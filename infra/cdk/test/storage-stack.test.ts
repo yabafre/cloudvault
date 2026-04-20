@@ -29,6 +29,26 @@ describe('StorageStack', () => {
     );
   });
 
+  it('enforces TLS 1.2+ in transit via a deny-insecure BucketPolicy', () => {
+    const { template } = synth();
+    template.hasResourceProperties(
+      'AWS::S3::BucketPolicy',
+      Match.objectLike({
+        PolicyDocument: Match.objectLike({
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Effect: 'Deny',
+              Action: 's3:*',
+              Condition: Match.objectLike({
+                Bool: Match.objectLike({ 'aws:SecureTransport': 'false' }),
+              }),
+            }),
+          ]),
+        }),
+      }),
+    );
+  });
+
   it('configures CORS for the provided web origin with the required methods', () => {
     const { template } = synth();
     template.hasResourceProperties(

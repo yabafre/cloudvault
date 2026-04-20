@@ -1,5 +1,4 @@
-import { Stack, StackProps } from 'aws-cdk-lib';
-import { CfnParameter } from 'aws-cdk-lib/aws-ssm';
+import { CfnOutput, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
 export const SECRET_KEYS = [
@@ -11,37 +10,55 @@ export const SECRET_KEYS = [
 
 export type SecretKey = (typeof SECRET_KEYS)[number];
 
-export const PLACEHOLDER_VALUE = 'replace-in-console';
-
 export interface ParamsStackProps extends StackProps {
   readonly envName: 'dev' | 'prod';
 }
 
 /**
- * SSM Parameter Store placeholders for runtime secrets.
+ * SSM Parameter Store ownership — operator-managed, NOT CDK-managed.
  *
- * CloudFormation refuses to CREATE `SecureString` parameters; only String/StringList
- * work at creation time. The 4 entries here are therefore seeded with the literal
- * placeholder `replace-in-console` and MUST be overwritten via the AWS Console
- * (or `aws ssm put-parameter --type SecureString --overwrite`) immediately after
- * the first deploy. Story 1-8 wires a deploy-time guard that fails if any value
- * still equals the placeholder.
+ * Why this stack does NOT create SSM parameters:
+ *   1. CloudFormation cannot CREATE `Type: SecureString` parameters (only String /
+ *      StringList). Using `CfnParameter { type: 'SecureString' }` either fails at
+ *      deploy or silently downgrades to `String` — persisting the placeholder as
+ *      plaintext.
+ *   2. If CDK owns the parameter, every `cdk deploy` re-asserts the template
+ *      value. After an operator manually sets the real secret, the next deploy
+ *      would overwrite it back to the placeholder. Drift loss.
+ *
+ * Operator runbook (one-time, per env, via AWS CLI or Console):
+ *   aws ssm put-parameter \
+ *     --region eu-west-3 \
+ *     --name /cloudvault/{env}/{KEY} \
+ *     --type SecureString \
+ *     --value '<real-secret>' \
+ *     --no-overwrite
+ *
+ * Other stacks (api, lambda) import these at deploy-time via
+ * `StringParameter.valueForSecureStringParameter()` or `fromSecureStringParameterAttributes()`.
+ *
+ * This stack emits `CfnOutput`s to document the expected parameter names and
+ * provides a consistent namespace constant across the codebase.
  */
 export class ParamsStack extends Stack {
-  public readonly parameters: Record<SecretKey, CfnParameter>;
+  public readonly parameterNames: Record<SecretKey, string>;
 
   constructor(scope: Construct, id: string, props: ParamsStackProps) {
     super(scope, id, props);
 
-    const parameters = {} as Record<SecretKey, CfnParameter>;
+    this.parameterNames = {} as Record<SecretKey, string>;
     for (const key of SECRET_KEYS) {
-      parameters[key] = new CfnParameter(this, `${key}Param`, {
-        name: `/cloudvault/${props.envName}/${key}`,
-        type: 'SecureString',
-        value: PLACEHOLDER_VALUE,
-        description: `CloudVault ${props.envName} — ${key}. Overwrite in AWS Console post-deploy.`,
+      const name = `/cloudvault/${props.envName}/${key}`;
+      this.parameterNames[key] = name;
+      new CfnOutput(this, `${key}ParamName`, {
+        value: name,
+        description: `Expected SSM SecureString parameter name for ${key} (operator-managed).`,
+        exportName: `cloudvault-${props.envName}-param-${key.toLowerCase().replace(/_/g, '-')}`,
       });
     }
-    this.parameters = parameters;
+  }
+
+  public getParameterName(key: SecretKey): string {
+    return this.parameterNames[key];
   }
 }

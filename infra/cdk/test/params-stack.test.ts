@@ -12,28 +12,29 @@ describe('ParamsStack', () => {
     return { stack, template: Template.fromStack(stack) };
   };
 
-  it('creates exactly one SecureString parameter per declared secret key', () => {
+  it('creates ZERO SSM parameters (operator-managed, not CDK-managed)', () => {
     const { template } = synth();
-    template.resourceCountIs('AWS::SSM::Parameter', SECRET_KEYS.length);
-    const params = template.findResources('AWS::SSM::Parameter');
-    for (const resource of Object.values(params)) {
-      const props = (resource as { Properties?: { Type?: string } }).Properties;
-      expect(props?.Type).toBe('SecureString');
+    template.resourceCountIs('AWS::SSM::Parameter', 0);
+  });
+
+  it('emits one CfnOutput per declared secret, documenting the expected parameter name', () => {
+    const { template } = synth('dev');
+    const outputs = template.findOutputs('*');
+    const outputValues = Object.values(outputs).map(
+      (o) => (o as { Value?: unknown }).Value,
+    );
+    for (const key of SECRET_KEYS) {
+      const expectedName = `/cloudvault/dev/${key}`;
+      expect(outputValues).toContain(expectedName);
     }
   });
 
-  it('names each parameter /cloudvault/{env}/{KEY} and seeds the placeholder value', () => {
-    const { template } = synth('dev');
-    for (const key of SECRET_KEYS) {
-      template.hasResourceProperties(
-        'AWS::SSM::Parameter',
-        Match.objectLike({
-          Name: `/cloudvault/dev/${key}`,
-          Type: 'SecureString',
-          Value: 'replace-in-console',
-        }),
-      );
-    }
+  it('uses prod env in the parameter name when synthed for prod', () => {
+    const { template } = synth('prod');
+    template.hasOutput(
+      '*',
+      Match.objectLike({ Value: '/cloudvault/prod/JWT_SECRET' }),
+    );
   });
 
   it('covers the four MVP secrets: JWT, DATABASE_URL, GOOGLE_CLIENT_SECRET, THUMBNAIL_WEBHOOK_SECRET', () => {
@@ -48,11 +49,11 @@ describe('ParamsStack', () => {
     expect(SECRET_KEYS.length).toBe(4);
   });
 
-  it('scopes parameter names to the prod env when synthed for prod', () => {
-    const { template } = synth('prod');
-    template.hasResourceProperties(
-      'AWS::SSM::Parameter',
-      Match.objectLike({ Name: '/cloudvault/prod/JWT_SECRET' }),
+  it('exposes parameter names via getParameterName for cross-stack import', () => {
+    const { stack } = synth('prod');
+    expect(stack.getParameterName('JWT_SECRET')).toBe('/cloudvault/prod/JWT_SECRET');
+    expect(stack.getParameterName('THUMBNAIL_WEBHOOK_SECRET')).toBe(
+      '/cloudvault/prod/THUMBNAIL_WEBHOOK_SECRET',
     );
   });
 

@@ -15,6 +15,17 @@ type EventRule = {
   };
 };
 
+type IamPolicy = {
+  Properties?: {
+    PolicyDocument?: {
+      Statement?: Array<{
+        Action?: string | string[];
+        Resource?: unknown;
+      }>;
+    };
+  };
+};
+
 describe('LambdaStack', () => {
   const synth = (env: 'dev' | 'prod' = 'dev') => {
     const app = new App();
@@ -39,12 +50,22 @@ describe('LambdaStack', () => {
     expect(Object.keys(fns).length).toBe(2);
   });
 
-  it('creates an SQS DLQ dedicated to thumbnail-generator failures', () => {
+  it('creates two SQS-managed-encrypted DLQs (thumbnail + orphan-reconciler)', () => {
     const { template } = synth();
-    template.resourceCountIs('AWS::SQS::Queue', 1);
+    template.resourceCountIs('AWS::SQS::Queue', 2);
     template.hasResourceProperties(
       'AWS::SQS::Queue',
-      Match.objectLike({ QueueName: 'cloudvault-dev-thumbnail-dlq' }),
+      Match.objectLike({
+        QueueName: 'cloudvault-dev-thumbnail-dlq',
+        SqsManagedSseEnabled: true,
+      }),
+    );
+    template.hasResourceProperties(
+      'AWS::SQS::Queue',
+      Match.objectLike({
+        QueueName: 'cloudvault-dev-orphan-reconciler-dlq',
+        SqsManagedSseEnabled: true,
+      }),
     );
   });
 
@@ -79,28 +100,60 @@ describe('LambdaStack', () => {
     expect(targets[0]!.DeadLetterConfig?.Arn).toBeDefined();
   });
 
-  it('schedules orphan-reconciler on an EventBridge rule firing every 7 days', () => {
+  it('schedules orphan-reconciler on an EventBridge rule firing every 7 days with a DLQ', () => {
     const { template } = synth();
-    template.hasResourceProperties(
-      'AWS::Events::Rule',
-      Match.objectLike({ ScheduleExpression: 'rate(7 days)', State: 'ENABLED' }),
+    const rules = template.findResources('AWS::Events::Rule') as Record<string, EventRule>;
+    const schedule = Object.values(rules).find(
+      (r) => r.Properties?.ScheduleExpression === 'rate(7 days)',
     );
+    expect(schedule).toBeDefined();
+    expect(schedule!.Properties!.State).toBe('ENABLED');
+    const target = schedule!.Properties!.Targets![0]!;
+    expect(target.DeadLetterConfig?.Arn).toBeDefined();
+    expect(target.RetryPolicy?.MaximumRetryAttempts).toBe(2);
   });
 
-  it('grants both Lambda roles IAM access scoped to S3 actions on the storage bucket', () => {
+  it('scopes thumbnail-generator S3 grants to users/*/originals/* (read) and users/*/thumbnails/* (write)', () => {
     const { template } = synth();
-    const policies = template.findResources('AWS::IAM::Policy');
-    const policyStatements = Object.values(policies).flatMap((p) => {
-      const props = (p as { Properties?: { PolicyDocument?: { Statement?: unknown[] } } })
-        .Properties;
-      return props?.PolicyDocument?.Statement ?? [];
-    });
-    const scopedToBucket = policyStatements.some((stmt) => {
-      const s = stmt as { Action?: unknown };
-      const actions = Array.isArray(s.Action) ? s.Action : [s.Action];
-      return actions.some((a) => typeof a === 'string' && a.startsWith('s3:'));
-    });
-    expect(scopedToBucket).toBe(true);
+    const policies = template.findResources('AWS::IAM::Policy') as Record<string, IamPolicy>;
+    const statements = Object.values(policies).flatMap(
+      (p) => p.Properties?.PolicyDocument?.Statement ?? [],
+    );
+
+    const serialized = JSON.stringify(statements);
+    // thumbnail-generator read scope
+    expect(serialized).toMatch(/users\/\*\/originals\/\*/);
+    // thumbnail-generator write scope
+    expect(serialized).toMatch(/users\/\*\/thumbnails\/\*/);
+  });
+
+  it('scopes orphan-reconciler S3 grants to users/* prefix (no full-bucket access)', () => {
+    const { template } = synth();
+    const policies = template.findResources('AWS::IAM::Policy') as Record<string, IamPolicy>;
+
+    // Every resource path referencing s3:GetObject or s3:DeleteObject must be
+    // prefix-scoped. A plain bucket ARN with no key suffix is the regression we
+    // want to block (full-bucket read was the original orphan-reconciler bug).
+    for (const policy of Object.values(policies)) {
+      const statements = policy.Properties?.PolicyDocument?.Statement ?? [];
+      for (const stmt of statements) {
+        const actions = Array.isArray(stmt.Action) ? stmt.Action : [stmt.Action];
+        const touchesObjects = actions.some(
+          (a) =>
+            typeof a === 'string' &&
+            (a === 's3:GetObject' ||
+              a === 's3:GetObject*' ||
+              a === 's3:DeleteObject' ||
+              a === 's3:DeleteObject*' ||
+              a === 's3:PutObject' ||
+              a === 's3:PutObject*'),
+        );
+        if (!touchesObjects) continue;
+        const resourceSerialized = JSON.stringify(stmt.Resource);
+        // Every object-level action must reference at least one users/ prefix.
+        expect(resourceSerialized).toMatch(/users\//);
+      }
+    }
   });
 
   it('pins the lambda stack to eu-west-3 and respects cloudvault-{env}-lambda naming', () => {

@@ -24,6 +24,7 @@ export class StorageStack extends Stack {
     this.bucket = new Bucket(this, 'FilesBucket', {
       bucketName: `cloudvault-${props.envName}-files`,
       encryption: BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       publicReadAccess: false,
       versioned: false,

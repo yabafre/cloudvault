@@ -18,9 +18,21 @@ const webOrigin =
   process.env.WEB_ORIGIN ??
   'http://localhost:3000';
 
+if (webOrigin === '*' || !/^https?:\/\/[^\s*]/i.test(webOrigin)) {
+  throw new Error(
+    `Invalid webOrigin "${webOrigin}". Must be a full http(s) URL; wildcard and malformed values are rejected.`,
+  );
+}
+
 const acmCertArn =
   (app.node.tryGetContext('acmCertArn') as string | undefined) ??
   (envName === 'prod' ? process.env.ACM_CERT_ARN_PROD : undefined);
+
+if (envName === 'prod' && !acmCertArn) {
+  throw new Error(
+    "prod synth requires an ACM certificate ARN. Pass -c acmCertArn=<arn> or set ACM_CERT_ARN_PROD in the environment.",
+  );
+}
 
 const awsEnv = { region: 'eu-west-3' };
 

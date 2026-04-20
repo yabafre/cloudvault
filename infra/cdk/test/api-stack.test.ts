@@ -17,11 +17,17 @@ describe('ApiStack', () => {
     return { stack, template: Template.fromStack(stack) };
   };
 
-  it('keeps at least one task warm with DesiredCount: 1', () => {
+  it('keeps at least one task warm with DesiredCount: 1 and capped rolling deploy at 200%', () => {
     const { template } = synth({ acmCertArn: ACM_CERT_ARN });
     template.hasResourceProperties(
       'AWS::ECS::Service',
-      Match.objectLike({ DesiredCount: 1 }),
+      Match.objectLike({
+        DesiredCount: 1,
+        DeploymentConfiguration: Match.objectLike({
+          MinimumHealthyPercent: 100,
+          MaximumPercent: 200,
+        }),
+      }),
     );
   });
 
@@ -49,13 +55,14 @@ describe('ApiStack', () => {
     );
   });
 
-  it('exposes an HTTPS listener on port 443 using the imported ACM certificate', () => {
+  it('exposes an HTTPS listener on port 443 with a modern TLS policy (no TLS 1.0/1.1)', () => {
     const { template } = synth({ acmCertArn: ACM_CERT_ARN });
     template.hasResourceProperties(
       'AWS::ElasticLoadBalancingV2::Listener',
       Match.objectLike({
         Port: 443,
         Protocol: 'HTTPS',
+        SslPolicy: 'ELBSecurityPolicy-TLS13-1-2-2021-06',
         Certificates: Match.arrayWith([Match.objectLike({ CertificateArn: ACM_CERT_ARN })]),
       }),
     );
@@ -78,12 +85,51 @@ describe('ApiStack', () => {
     );
   });
 
+  it('configures a tight ALB health check pinned to /health', () => {
+    const { template } = synth({ acmCertArn: ACM_CERT_ARN });
+    template.hasResourceProperties(
+      'AWS::ElasticLoadBalancingV2::TargetGroup',
+      Match.objectLike({
+        HealthCheckPath: '/health',
+        HealthCheckIntervalSeconds: 15,
+        HealthyThresholdCount: 2,
+        UnhealthyThresholdCount: 3,
+      }),
+    );
+  });
+
+  it('enables Container Insights on the ECS cluster', () => {
+    const { template } = synth({ acmCertArn: ACM_CERT_ARN });
+    template.hasResourceProperties(
+      'AWS::ECS::Cluster',
+      Match.objectLike({
+        ClusterSettings: Match.arrayWith([
+          Match.objectLike({ Name: 'containerInsights', Value: 'enabled' }),
+        ]),
+      }),
+    );
+  });
+
+  it('retains api log group with a bounded retention (not never-expire)', () => {
+    const { template } = synth({ acmCertArn: ACM_CERT_ARN });
+    const groups = template.findResources('AWS::Logs::LogGroup');
+    const api = Object.values(groups).find((g) => {
+      const name = (g as { Properties?: { LogGroupName?: string } }).Properties?.LogGroupName;
+      return name === '/cloudvault/prod/api';
+    });
+    expect(api).toBeDefined();
+    const retention = (api as { Properties?: { RetentionInDays?: number } }).Properties
+      ?.RetentionInDays;
+    expect(typeof retention).toBe('number');
+    expect(retention).toBeGreaterThan(0);
+  });
+
   it('does not create a new ACM certificate (imported from context)', () => {
     const { template } = synth({ acmCertArn: ACM_CERT_ARN });
     template.resourceCountIs('AWS::CertificateManager::Certificate', 0);
   });
 
-  it('synths cleanly in dev without an ACM cert (HTTP-only)', () => {
+  it('synths cleanly in dev without an ACM cert (HTTP-only, no SslPolicy)', () => {
     const { template } = synth({ env: 'dev' });
     template.resourceCountIs('AWS::CertificateManager::Certificate', 0);
     template.hasResourceProperties(
@@ -96,5 +142,12 @@ describe('ApiStack', () => {
     const { stack } = synth({ env: 'prod', acmCertArn: ACM_CERT_ARN });
     expect(stack.region).toBe('eu-west-3');
     expect(stack.stackName).toBe('cloudvault-prod-api');
+  });
+
+  it('provisions 2 NAT gateways in prod (HA) vs 1 in dev (cost)', () => {
+    const prod = synth({ env: 'prod', acmCertArn: ACM_CERT_ARN });
+    prod.template.resourceCountIs('AWS::EC2::NatGateway', 2);
+    const dev = synth({ env: 'dev' });
+    dev.template.resourceCountIs('AWS::EC2::NatGateway', 1);
   });
 });

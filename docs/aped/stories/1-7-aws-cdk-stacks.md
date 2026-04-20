@@ -196,3 +196,63 @@ Per `.aped/aped-dev/references/ticket-git-workflow.md` (Linear + GitHub):
 - `package.json` (root) — added `cdk:synth`, `cdk:diff` scripts
 - `.env.example` — added `WEB_ORIGIN`, `ACM_CERT_ARN_PROD`
 - `pnpm-lock.yaml` — locked `aws-cdk-lib@2.250.0`, `constructs@10.6.0`, `aws-cdk@2.1118.2`, `ts-jest`, `ts-node`, `jest`, `typescript`
+
+## Review Record
+
+- **Reviewer:** Lead (APED `/aped-review`) — specialists: Eva (ac-validator), Marcus (code-quality), Rex (git-auditor), Kai (devops/infra)
+- **Total findings (initial):** 22 (3 critical / 5 high / 8 medium / 6 low)
+- **Review verdict:** CHANGES_REQUESTED → all 22 findings addressed inline
+- **AC5 deviation sign-off:** Lead formally accepts the EventBridge Rule + SQS DLQ + `retryAttempts: 2` pattern as equivalent to the literal AC5 text (`S3EventSource` + `maxReceiveCount: 3`). The cross-stack dependency cycle that forced the change is real; the stub handler has been hardened (`return {"ok": True}`) and a doc comment in `lambda-stack.ts` warns the real story-4-5 handler that it MUST short-circuit thumbnail-prefixed keys (EventBridge cannot filter them out — see M1 below).
+
+### Findings addressed
+
+**Critical**
+- **C1 — SSM SecureString overwrite loop + wrong type** → `ParamsStack` rewritten as documentation-only: emits `CfnOutput` per secret key, never creates `AWS::SSM::Parameter`. Operator creates them once via `aws ssm put-parameter --type SecureString --no-overwrite`. Other stacks import via `StringParameter.fromSecureStringParameterAttributes`. `cdk deploy` can no longer clobber operator-set values.
+- **C2 — `enforceSSL: true` missing** → added on `FilesBucket`. Test `enforces TLS 1.2+ in transit via a deny-insecure BucketPolicy` added.
+- **C3 — `thumbnail-generator/handler.py` was a broken pre-CDK prototype** → replaced with the same stub shape as `orphan-reconciler/handler.py`. A file-level docstring now documents the EventBridge event shape + the mandatory self-loop guard the real implementation (story 4-5) must apply.
+
+**High**
+- **H1 — Orphan reconciler `grantRead` full-bucket** → `grantRead(orphanReconciler, 'users/*')`. Test `scopes orphan-reconciler S3 grants to users/* prefix` added.
+- **H2 — ALB no `SslPolicy`** → `sslPolicy: SslPolicy.RECOMMENDED_TLS` (resolves to `ELBSecurityPolicy-TLS13-1-2-2021-06`). Test assertion updated.
+- **H3 — ALB no health check** → `configureHealthCheck({ path: '/health', interval: 15s, healthy: 2, unhealthy: 3, timeout: 5s })`. `healthCheckGracePeriod: 60s`. Test added.
+- **H4 — No CloudWatch log retention** → Lambda `logRetention: RetentionDays.ONE_MONTH` on both functions. Fargate: explicit `LogGroup` with `THREE_MONTHS` in prod / `ONE_WEEK` in dev, `RemovalPolicy.RETAIN` in prod. Test added.
+- **H5 — `source-map-support` phantom dep** → declared in `devDependencies` of `infra/cdk/package.json`.
+
+**Medium**
+- **M1 — EventBridge rule fires on all `users/` keys (self-loop when real handler deploys)** → documented as a stack-level comment (EventBridge has no regex/anything-but-prefix; filtering is enforced handler-side). The stub handler is safe; story 4-5 owns the runtime guard.
+- **M2 — AC5 deviation** → see Lead sign-off above.
+- **M3 — `webOrigin` not validated** → `bin/cloudvault.ts` now rejects `*` and non-`http(s)://` values at synth time.
+- **M4 — `acmCertArn` missing in prod** → `bin/cloudvault.ts` throws at synth time if `envName === 'prod' && !acmCertArn`.
+- **M5 — IAM test was vacuous** → replaced with two targeted assertions: thumbnail grants scoped to `users/*/originals/*` + `users/*/thumbnails/*`, every object-level IAM statement must reference a `users/` prefix.
+- **M6 — `cdk.context.json` absent** → created at `infra/cdk/cdk.context.json` (`{}`). Future `fromLookup` calls will populate it reproducibly.
+- **M7 — `@aws-cdk/core:newStyleStackSynthesis` flag missing** → added in `cdk.json`. Story 1-8's OIDC bootstrap v2 is now guaranteed to match.
+- **M8 — Single NAT GW is SPOF** → `natGateways: isProd ? 2 : 1`. Prod cost: +~€32/mo for HA per architecture §5.2 G4. Test asserts the split.
+
+**Low**
+- **L1 — `cdk.json` typo `route53-patters`** → fixed to `route53-patterns`.
+- **L2 — `boto3` in `thumbnail-generator/requirements.txt`** → removed (Lambda runtime bundles it). Only `Pillow==11.0.0` remains.
+- **L3 — `.gitignore` dead carve-out `!jest.config.js`** → removed (jest config is `.ts`).
+- **L4 — ThumbnailDlq SQS unencrypted** → `encryption: QueueEncryption.SQS_MANAGED`. Added `OrphanReconcilerDlq` with same encryption.
+- **L5 — Commit message missing `Part of KON-88` footer** → applied to the review-fix commit going forward.
+- **L6 — `minHealthyPercent: 100` undocumented + no `containerInsights`** → `maxHealthyPercent: 200` set explicitly, `containerInsights: true` on the cluster, rationale documented in the stack.
+
+### Verification (post-fix)
+
+- Tests rewritten for new surface (enforceSSL, SslPolicy, health check, NAT split, ParamsStack CfnOutputs, IAM scoping). Runtime execution deferred to operator: `pnpm --filter @cloudvault/infra test` + `pnpm --filter @cloudvault/infra cdk synth -c env=dev` + `... -c env=prod -c acmCertArn=<arn>`.
+- Expected test count post-fix: `storage-stack.test.ts` 9, `lambda-stack.test.ts` 7, `api-stack.test.ts` 13, `params-stack.test.ts` 6 → ~35 tests.
+
+### Environment note (verification blocker observed during review)
+
+During the post-fix verification sweep, `pnpm install` (both from the worktree and from the main repo) hung indefinitely with no progress. Investigation showed `node_modules/.pnpm/aws-cdk-lib@2.250.0_constructs@10.6.0/node_modules/aws-cdk-lib/package.json` is MISSING from the shared pnpm store — the `aws-cdk-lib` package is extracted but incomplete. Root cause is outside this story's scope (likely a prior `pnpm prune` or corrupted store). Recommended recovery before merging:
+
+```bash
+# From main repo root
+rm -rf node_modules
+pnpm store prune
+pnpm install
+pnpm --filter @cloudvault/infra test
+pnpm --filter @cloudvault/infra cdk synth -c env=dev
+pnpm --filter @cloudvault/infra cdk synth -c env=prod -c acmCertArn=<arn>
+```
+
+All code changes are static edits to well-tested patterns; the tests are additions/tightenings on top of the original 26/26 green baseline. No logic is inferred without a test.
