@@ -312,4 +312,4 @@ No new repository dependencies. No `package.json` changes expected beyond an opt
 - `README.md` — added `## ⚙️ CI/CD` section (workflows list, required secrets table, OIDC-only policy)
 - `docs/aped/state.yaml` — story `1-8-github-actions-ci-cd` status: `pending` → `in-progress` → `review`
 - `docs/aped/stories/1-8-github-actions-ci-cd.md` — status, tasks checked, Dev Agent Record filled
-- `.aped/WORKTREE` — created (worktree marker for APED engine)
+- `.aped/WORKTREE` — created (worktree marker for APED engine — local-only, gitignored by design)

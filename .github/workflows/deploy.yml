@@ -1,7 +1,10 @@
 name: Deploy
 
 # Gated by CI: runs only after the CI workflow succeeds on main, or via
-# manual dispatch. workflow_run only fires from the host repo (never forks).
+# manual dispatch FROM main. workflow_run only fires from the host repo
+# (never forks). workflow_dispatch is restricted to the main ref at the
+# job-level `if:` guard below — selecting a feature branch in the UI will
+# skip every job.
 on:
   workflow_run:
     workflows: [CI]
@@ -18,10 +21,11 @@ jobs:
   # equivalent but actionlint rejects the empty list as a syntax error.
   deploy-infra:
     name: Deploy infra (CDK) — stub
-    # Allow success-only workflow_run, or manual dispatch on main.
+    # Allow success-only workflow_run on main, or manual dispatch FROM main.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     environment: production
@@ -33,13 +37,13 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup monorepo
         uses: ./.github/actions/setup-monorepo
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@5579c002bb4778aa43395ef1df492868a9a1c83f # v4.0.2
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: eu-west-3
@@ -52,8 +56,9 @@ jobs:
   deploy-api:
     name: Deploy API (Fargate) — stub
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     environment: production
@@ -65,27 +70,29 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup monorepo
         uses: ./.github/actions/setup-monorepo
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@5579c002bb4778aa43395ef1df492868a9a1c83f # v4.0.2
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: eu-west-3
 
-      # TODO: wire in a future epic-1 story (Fargate deploy, TBD) — build Docker image, push to ECR, update ECS service.
+      # TODO: wire in a future epic-1 Fargate deploy story (ticket TBD — tracked under Epic 1 roadmap, see docs/aped/epics.md).
+      # Steps will build the Docker image, push to ECR (eu-west-3), and update the ECS service.
       - name: Fargate deploy (stub)
         run: |
-          echo "TODO Fargate deploy — wired in a future epic-1 story (API deploy, TBD)"
+          echo "TODO Fargate deploy — wired in future epic-1 API deploy story (ticket TBD)"
 
   deploy-lambda:
     name: Deploy Lambda (thumbnail-generator) — stub
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     environment: production
@@ -97,13 +104,13 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup monorepo
         uses: ./.github/actions/setup-monorepo
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@5579c002bb4778aa43395ef1df492868a9a1c83f # v4.0.2
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: eu-west-3

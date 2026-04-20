@@ -4,7 +4,7 @@
 
 ## 🎯 Objectifs du projet
 
-- Maîtriser les services AWS (S3, Lambda, EC2)
+- Maîtriser les services AWS (S3, Lambda, ECS Fargate)
 - Implémenter une stack TypeScript moderne (NestJS + Next.js)
 - Gérer un monorepo avec Turborepo et pnpm
 - Mettre en place un pipeline CI/CD professionnel
@@ -30,10 +30,10 @@
 - Tailwind CSS
 
 **Infrastructure**
-- AWS S3 (stockage fichiers)
-- AWS Lambda (traitement asynchrone Python)
-- AWS EC2 (hébergement API)
-- PostgreSQL (base de données)
+- AWS S3 eu-west-3 (stockage fichiers, SSE-S3, pre-signed POST)
+- AWS Lambda (traitement asynchrone Python — thumbnails Pillow)
+- AWS ECS Fargate eu-west-3 (hébergement API NestJS)
+- PostgreSQL (Neon EU, via Prisma 7)
 - Cloudflare (DNS, CDN, WAF)
 - Docker & Docker Compose
 
@@ -146,12 +146,16 @@ docker-compose -f infra/docker-compose.yml up -d
 pnpm dev
 ```
 
-### Production (EC2)
+### Production (ECS Fargate eu-west-3)
 
-```
-# Voir infra/scripts/deploy.sh
-./infra/scripts/deploy.sh
-```
+Le déploiement passe par GitHub Actions (`.github/workflows/deploy.yml`) :
+
+- trigger : succès CI sur `main` ou `workflow_dispatch` depuis `main` uniquement
+- gate : environnement GitHub `production` (approbation manuelle obligatoire)
+- auth : OIDC vers AWS via `aws-actions/configure-aws-credentials@v4` (aucune clé IAM long-lived)
+- 3 jobs parallèles : `deploy-infra` (CDK), `deploy-api` (Fargate), `deploy-lambda`
+
+Le bootstrap du provider OIDC + rôle IAM est suivi dans KON-88 (story 1-7).
 
 ## 🔐 Sécurité
 
@@ -186,6 +190,10 @@ Le repository utilise **GitHub Actions** avec authentification OIDC vers AWS.
 | `TURBO_TOKEN` | optionnel | Active le cache distant Turborepo (fallback local sans lui) |
 | `TURBO_TEAM` | optionnel | Team slug Turborepo (paire avec `TURBO_TOKEN`) |
 | `VERCEL_TOKEN` | futur | Réservé pour le futur job de déploiement Vercel (frontend) |
+
+> **Permissions requises côté job.** Chaque job `deploy-*` doit déclarer `permissions: { id-token: write, contents: read }` pour que l'échange de token OIDC fonctionne. Déjà configuré dans `deploy.yml` — à préserver dans tout nouveau job de déploiement.
+>
+> **Required reviewers.** L'environnement GitHub `production` DOIT être configuré avec au moins un required reviewer (Settings → Environments → production). Sans reviewers, `workflow_dispatch` devient une porte ouverte sur la prod.
 
 ### Politique de credentials AWS
 

@@ -137,7 +137,7 @@ sprint:
       depends_on: []
       worktree: null
     1-8-github-actions-ci-cd:
-      status: ready-for-dev
+      status: review
       ticket: "KON-89"
       file: "docs/aped/stories/1-8-github-actions-ci-cd.md"
       depends_on: []
