@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { Logger } from '@nestjs/common';
 
 import { HealthService } from './health.service.js';
 import type { PrismaService } from '@/prisma/prisma.service.js';
@@ -11,6 +12,7 @@ describe('HealthService', () => {
   let prisma: PrismaMock;
   let storage: StorageMock;
   let service: HealthService;
+  let warnSpy: ReturnType<typeof jest.spyOn>;
 
   beforeEach(() => {
     prisma = {
@@ -23,6 +25,13 @@ describe('HealthService', () => {
       prisma as unknown as PrismaService,
       storage as unknown as StorageHealthIndicator,
     );
+    warnSpy = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('returns { database: "ok", storage: "ok" } + degraded=false when both probes succeed', async () => {
@@ -38,7 +47,7 @@ describe('HealthService', () => {
     });
   });
 
-  it('returns database=error + degraded=true when Prisma $queryRaw throws', async () => {
+  it('returns database=error + degraded=true when Prisma $queryRaw throws, and logs a warning with the underlying error message', async () => {
     (prisma.$queryRaw as jest.Mock).mockRejectedValue(new Error('db down'));
     (storage.check as jest.Mock).mockResolvedValue('ok');
 
@@ -49,6 +58,8 @@ describe('HealthService', () => {
       storage: 'ok',
       degraded: true,
     });
+    const warnings = warnSpy.mock.calls.map((call) => String(call[0]));
+    expect(warnings.some((m) => m.includes('DB probe failed') && m.includes('db down'))).toBe(true);
   });
 
   it('returns storage=error + degraded=true when storage indicator returns "error"', async () => {

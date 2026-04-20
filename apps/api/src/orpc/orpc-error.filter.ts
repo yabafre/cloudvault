@@ -24,12 +24,14 @@ type OrpcErrorShape = {
 // Recognize any ORPCError-shaped throw whose `code` is a valid ApiErrorCode
 // and `status` is a real HTTP status. `defined` (oRPC's contract-level typed
 // errors flag) is not required: handlers routinely throw ad-hoc ORPCErrors
-// (e.g. SERVICE_UNAVAILABLE from /health) with defined=false. The
-// isApiErrorCode gate keeps us from ever honoring a third-party error that
-// happens to look like an ORPCError but carries a code outside our union.
+// (e.g. SERVICE_UNAVAILABLE from /health) with defined=false. Requiring
+// `instanceof Error` blocks plain-object imposters from third-party libs
+// whose `message` field could otherwise leak raw internals (e.g. SQL
+// fragments) to the client via exception.message forwarding below. The
+// real @orpc/client ORPCError extends Error, so ad-hoc throws still pass.
 function isOrpcErrorShape(err: unknown): err is OrpcErrorShape {
-  if (typeof err !== 'object' || err === null) return false;
-  const candidate = err as Record<string, unknown>;
+  if (!(err instanceof Error)) return false;
+  const candidate = err as unknown as Record<string, unknown>;
   return (
     typeof candidate.status === 'number' &&
     candidate.status >= 400 &&

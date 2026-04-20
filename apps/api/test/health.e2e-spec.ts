@@ -1,4 +1,4 @@
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { type INestApplication, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
@@ -6,10 +6,12 @@ import { ORPCModule } from '@orpc/nest';
 import {
   experimental_RethrowHandlerPlugin as RethrowHandlerPlugin,
 } from '@orpc/server/plugins';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 
 import { OrpcErrorFilter } from '../src/orpc/orpc-error.filter';
+import { rethrowAdHocErrors } from '../src/orpc/rethrow-ad-hoc-filter';
 import { HealthOrpcHandler } from '../src/modules/health/health.orpc';
 import { HealthService } from '../src/modules/health/health.service';
 import { StorageHealthIndicator } from '../src/modules/health/storage.indicator';
@@ -48,14 +50,7 @@ class FakePrismaService {
     ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
     ORPCModule.forRoot({
       interceptors: [],
-      plugins: [
-        new RethrowHandlerPlugin({
-          filter: (error) => {
-            const candidate = error as { defined?: unknown } | null;
-            return !(candidate?.defined === true);
-          },
-        }),
-      ],
+      plugins: [new RethrowHandlerPlugin({ filter: rethrowAdHocErrors })],
     }),
   ],
   controllers: [HealthOrpcHandler],
@@ -67,6 +62,30 @@ class FakePrismaService {
   ],
 })
 class HealthE2EModule {}
+
+// Mirror of HealthE2EModule but with ThrottlerModule wired at a tiny limit so
+// we can prove @SkipThrottle() on /health actually bypasses the global guard.
+// Keeping this as a second module (not one with overrideProvider) avoids
+// perturbing the other suite's request budgets.
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 3 }]),
+    ORPCModule.forRoot({
+      interceptors: [],
+      plugins: [new RethrowHandlerPlugin({ filter: rethrowAdHocErrors })],
+    }),
+  ],
+  controllers: [HealthOrpcHandler],
+  providers: [
+    { provide: APP_FILTER, useClass: OrpcErrorFilter },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    HealthService,
+    StorageHealthIndicator,
+    PrismaService,
+  ],
+})
+class HealthThrottledE2EModule {}
 
 describe('Health endpoint (e2e)', () => {
   let app: INestApplication<App>;
@@ -133,14 +152,44 @@ describe('Health endpoint (e2e)', () => {
     expect(res.body.data).toEqual({ database: 'error', storage: 'error' });
   });
 
-  it('does not require an Authorization header across repeated hits (public + SkipThrottle intent)', async () => {
-    // Repeated sequential hits without any auth header — simulates an uptime
-    // robot. Full throttler behaviour is not exercised here (the harness
-    // intentionally omits ThrottlerModule), but this confirms the handler
-    // is reachable with no credential and is stable under repeated access.
+  it('does not require an Authorization header across repeated hits (public route)', async () => {
     for (let i = 0; i < 5; i++) {
       const res = await request(app.getHttpServer()).get('/health').expect(200);
       expect(res.body).toEqual({ database: 'ok', storage: 'ok' });
     }
+  });
+});
+
+describe('Health endpoint throttler bypass (e2e)', () => {
+  let app: INestApplication<App>;
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [HealthThrottledE2EModule],
+    })
+      .overrideProvider(PrismaService)
+      .useClass(FakePrismaService)
+      .overrideProvider(StorageHealthIndicator)
+      .useClass(FakeStorageHealthIndicator)
+      .compile();
+
+    app = moduleFixture.createNestApplication({ bufferLogs: true });
+    await app.init();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('sends more requests than the throttler limit without any 429 — proves @SkipThrottle() actually bypasses ThrottlerGuard', async () => {
+    // Limit is 3 per minute; send 10 and assert every one is 200.
+    const results: number[] = [];
+    for (let i = 0; i < 10; i++) {
+      const res = await request(app.getHttpServer()).get('/health');
+      results.push(res.status);
+    }
+    expect(results).toHaveLength(10);
+    expect(results.every((s) => s === 200)).toBe(true);
+    expect(results.some((s) => s === 429)).toBe(false);
   });
 });

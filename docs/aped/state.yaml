@@ -127,7 +127,7 @@ sprint:
       depends_on: []
       worktree: null
     1-6-health-endpoint:
-      status: ready-for-dev
+      status: done
       ticket: "KON-87"
       file: "docs/aped/stories/1-6-health-endpoint.md"
       depends_on: ["1-3-orpc-nest-adapter"]

@@ -9,11 +9,15 @@ export class StorageHealthIndicator implements OnModuleInit {
   private bucket?: string;
   private region?: string;
   private warnedMissingEnv = false;
-  // Upper bound chosen to stay well below the 2s LCP budget; see story
-  // Dev Notes. Test-overridable to keep the timeout path fast in CI.
-  private readonly timeoutMs: number = 1_000;
 
-  constructor(private readonly config: ConfigService) {}
+  // Upper bound chosen to stay well below the 2s LCP budget; see story
+  // Dev Notes. Exposed as a constructor parameter (not a `readonly` field
+  // overridden via cast) so tests can shorten it safely and TypeScript
+  // catches renames.
+  constructor(
+    private readonly config: ConfigService,
+    private readonly timeoutMs: number = 1_000,
+  ) {}
 
   onModuleInit(): void {
     this.bucket = this.config.get<string>('S3_BUCKET_NAME');

@@ -63,13 +63,13 @@ describe('StorageHealthIndicator', () => {
     // Never resolves — the race loses to the timer, which rejects.
     s3Mock.on(HeadBucketCommand).callsFake(() => new Promise(() => {}));
 
+    // Shorten the timeout via the constructor seam so the test doesn't block
+    // for 1s and so TS will flag any future rename of `timeoutMs`.
     const indicator = new StorageHealthIndicator(
       makeConfig({ AWS_REGION: 'eu-west-3', S3_BUCKET_NAME: 'cloudvault-test' }),
+      20,
     );
     indicator.onModuleInit();
-
-    // Shorten the timeout so the test itself does not block for 1s.
-    (indicator as unknown as { timeoutMs: number }).timeoutMs = 20;
 
     await expect(indicator.check()).resolves.toBe('error');
     const warnings = warnSpy.mock.calls.map((call) => String(call[0]));

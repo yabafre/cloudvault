@@ -8,6 +8,5 @@ import { StorageHealthIndicator } from './storage.indicator.js';
   imports: [PrismaModule],
   controllers: [HealthOrpcHandler],
   providers: [HealthService, StorageHealthIndicator],
-  exports: [HealthService, StorageHealthIndicator],
 })
 export class HealthModule {}

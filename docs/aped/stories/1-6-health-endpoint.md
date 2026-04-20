@@ -1,7 +1,7 @@
 # Story: 1-6-health-endpoint — /health oRPC endpoint + structured ApiErrorCode enforcement
 
 **Epic:** 1 — Platform Foundation & Contract Layer
-**Status:** review
+**Status:** done
 **Ticket:** [KON-87](https://linear.app/koni/issue/KON-87)
 **Branch:** `feature/KON-87-1-6-health-endpoint`
 **Size:** S (1 pt)
@@ -279,8 +279,45 @@ No peer-dep drift expected: `@aws-sdk/client-s3` v3.x is Node ≥18 compatible a
 
 **Modified**
 - `apps/api/src/app.module.ts` — import + register `HealthModule`
-- `apps/api/src/orpc/orpc-error.filter.ts` — narrow data-strip rule to `INTERNAL_ERROR` only; relax `isOrpcErrorShape` `defined` gate
+- `apps/api/src/orpc/orpc-error.filter.ts` — narrow data-strip rule to `INTERNAL_ERROR` only; `isOrpcErrorShape` requires `instanceof Error` + valid `ApiErrorCode` (blocks plain-object imposters)
+- `apps/api/src/orpc/orpc.module.ts` — use shared `rethrowAdHocErrors` filter
+- `apps/api/src/modules/health/health.module.ts` — drop unused `exports`
+- `apps/api/src/modules/health/health.service.ts` — timer cleanup in `probeDatabase()`, warn-level logging on DB failure
+- `apps/api/src/modules/health/storage.indicator.ts` — `timeoutMs` promoted to constructor parameter
 - `apps/api/package.json` — add `@aws-sdk/client-s3` (dep) + `aws-sdk-client-mock` (devDep)
 - `apps/api/test/jest-e2e.json` — ESM preset + ignore pre-existing scaffold test
+- `apps/api/test/health.e2e-spec.ts` — throttler-bypass suite (real ThrottlerModule proves `@SkipThrottle()`)
+- `apps/api/test/orpc-error-filter.e2e-spec.ts` — typed ORPCError path now asserts absence of `cause`/`name`/`errno`
 - `packages/types/src/common/common.types.ts` — add `SERVICE_UNAVAILABLE` to `API_ERROR_CODES`
 - `CLAUDE.md` — Troubleshooting entries for local `storage: "error"` + `@SkipThrottle` usage
+- `pnpm-lock.yaml` — auto-generated from the `@aws-sdk/client-s3` + `aws-sdk-client-mock` adds
+
+**Created (review fixes)**
+- `apps/api/src/orpc/rethrow-ad-hoc-filter.ts` — shared `rethrowAdHocErrors` filter (deduplicates the plugin config between `OrpcModule` and the two E2E harnesses; documents the load-bearing contract on oRPC's `defined` flag)
+
+## Review Record
+
+- **Reviewed:** 2026-04-20 → 2026-04-21
+- **Specialists:** Eva (ac-validator), Marcus (code-quality), Rex (git-auditor), Diego (backend)
+- **Outcome:** APPROVED after fixes — 10 findings (1 CRITICAL / 3 HIGH / 5 MEDIUM / 1 LOW), all addressed.
+
+### Findings + fixes
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| C1 | CRITICAL | `probeDatabase()` leaked a dangling timer and emitted an unhandled rejection on every successful probe | Mirrored `StorageHealthIndicator` `try/finally + clearTimeout` pattern in `health.service.ts` |
+| H1 | HIGH | `isOrpcErrorShape` relaxation allowed plain-object imposters from 3rd-party libs to reach the client via `exception.message` | Added `instanceof Error` gate in `orpc-error.filter.ts`; fixtures updated; test added for plain-object imposter |
+| H2 | HIGH | AC2 DB-probe failure was not logged at warn level with `requestId` + underlying error message | Added `Logger` + `warn(`DB probe failed: ${msg}`)` in `probeDatabase()` catch; `health.service.spec.ts` now asserts the warn log |
+| H3 | HIGH | `orpc-error.filter.spec.ts` fixtures carried obsolete `defined:true`; no unit test exercised `SERVICE_UNAVAILABLE`-with-data preservation | Dropped `defined` from `orpcErrorLike`; renamed the INTERNAL_ERROR strip test; added `preserves data for typed 5xx (SERVICE_UNAVAILABLE)` test |
+| M1 | MEDIUM | AC6 throttler bypass was not actually validated E2E — the harness omitted `ThrottlerModule` | Added `HealthThrottledE2EModule` with `ThrottlerModule.forRoot([{ ttl: 60_000, limit: 3 }])` + `APP_GUARD`; 10 sequential hits proven to never 429 |
+| M2 | MEDIUM | AC4 typed ORPCError E2E path asserted only `stack` absence; missed `cause` / `name` / `errno` | Added the three assertions to `orpc-error-filter.e2e-spec.ts` |
+| M3 | MEDIUM | `HealthModule.exports` leaked `HealthService` + `StorageHealthIndicator` with no consumer | Removed `exports` array |
+| M4 | MEDIUM | `StorageHealthIndicator.timeoutMs` was overridden in tests via an unsafe `as unknown as` cast | Promoted to an optional constructor parameter (`timeoutMs = 1_000`) |
+| M5 | MEDIUM | `RethrowHandlerPlugin` filter duplicated in 3 sites; load-bearing on oRPC's `defined=false` convention but undocumented | Extracted `rethrowAdHocErrors` into `src/orpc/rethrow-ad-hoc-filter.ts` with warning doc-comment; 3 call-sites now import it |
+| L1 | LOW | `pnpm-lock.yaml` was modified but not declared in File List | Added to the File List |
+
+### Verification
+
+- `pnpm --filter @cloudvault/api test` → **64 passed / 0 failed** (8 suites) — +2 new tests vs dev record
+- `pnpm --filter @cloudvault/api test:e2e` → **12 passed / 0 failed** (3 suites) — +1 new test (throttler bypass)
+- `pnpm --filter @cloudvault/api build` → TSC 0 issues, SWC compiled 61 files

@@ -14,6 +14,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 
 import { OrpcErrorFilter } from '../src/orpc/orpc-error.filter';
+import { rethrowAdHocErrors } from '../src/orpc/rethrow-ad-hoc-filter';
 
 const boomContract = oc.router({
   raw: oc.route({ method: 'GET', path: '/boom-raw' }).output(z.object({ ok: z.boolean() })),
@@ -48,14 +49,7 @@ class BoomController {
     ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
     ORPCModule.forRoot({
       interceptors: [],
-      plugins: [
-        new RethrowHandlerPlugin({
-          filter: (error) => {
-            const candidate = error as { defined?: unknown } | null;
-            return !(candidate?.defined === true);
-          },
-        }),
-      ],
+      plugins: [new RethrowHandlerPlugin({ filter: rethrowAdHocErrors })],
     }),
   ],
   controllers: [BoomController],
@@ -92,12 +86,15 @@ describe('OrpcErrorFilter wire contract (e2e)', () => {
     expect(JSON.stringify(res.body)).not.toContain('secret internals');
   });
 
-  it('preserves a typed ORPCError verbatim: 400 + {code:"VALIDATION_ERROR", message:"nope", data}', async () => {
+  it('preserves a typed ORPCError verbatim: 400 + {code:"VALIDATION_ERROR", message:"nope", data} with no stack/cause/name/errno', async () => {
     const res = await request(app.getHttpServer()).get('/boom-typed').expect(400);
 
     expect(res.body.code).toBe('VALIDATION_ERROR');
     expect(res.body.message).toBe('nope');
     expect(res.body.data).toEqual({ field: 'email' });
     expect(res.body).not.toHaveProperty('stack');
+    expect(res.body).not.toHaveProperty('cause');
+    expect(res.body).not.toHaveProperty('name');
+    expect(res.body).not.toHaveProperty('errno');
   });
 });
