@@ -1,0 +1,4 @@
+# Orphan reconciler runtime dependencies.
+# Placeholder — boto3 is provided by the Lambda runtime. Real deps
+# (a database driver for the reconciliation query) will be added when the
+# real handler lands in a follow-up story.
