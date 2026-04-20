@@ -2,7 +2,7 @@
 # Docs: https://workmux.raine.dev/
 
 panes:
-  - command: <agent> --dangerously-skip-permissions
+  - command: claude --dangerously-skip-permissions
     focus: true
 
 # Gitignored files must be copied — tracked files already land via git checkout.
