@@ -1,7 +1,7 @@
 # Story: 1-8-github-actions-ci-cd — Scaffold GitHub Actions CI + OIDC-authenticated deploy workflow
 
 **Epic:** 1 — Platform Foundation & Contract Layer
-**Status:** review
+**Status:** done
 **Ticket:** [KON-89](https://linear.app/koni/issue/KON-89/1-8-scaffold-github-actions-cicd-workflows-ciyml-deployyml)
 **Branch:** `feature/KON-89-1-8-github-actions-ci-cd`
 **Size:** M (2 pts)
@@ -310,6 +310,42 @@ No new repository dependencies. No `package.json` changes expected beyond an opt
 
 **Modified:**
 - `README.md` — added `## ⚙️ CI/CD` section (workflows list, required secrets table, OIDC-only policy)
-- `docs/aped/state.yaml` — story `1-8-github-actions-ci-cd` status: `pending` → `in-progress` → `review`
-- `docs/aped/stories/1-8-github-actions-ci-cd.md` — status, tasks checked, Dev Agent Record filled
+- `docs/aped/state.yaml` — story `1-8-github-actions-ci-cd` status: `pending` → `in-progress` → `review` → `done`
+- `docs/aped/stories/1-8-github-actions-ci-cd.md` — status, tasks checked, Dev Agent Record filled, Review Record appended
 - `.aped/WORKTREE` — created (worktree marker for APED engine — local-only, gitignored by design)
+
+## Review Record
+
+- **Reviewer:** Lead (human-in-the-loop relay) + specialists Eva, Marcus, Rex, Kai
+- **Review run:** 2026-04-20
+- **Commits:** `b8b62ac` (fixes) + follow-up README drift patch
+
+### Specialists dispatched
+
+| Persona | Scope | Verdict |
+|---|---|---|
+| Eva (ac-validator) | 13 ACs + 6 tasks | CHANGES_REQUESTED (1 AC strict failure on Node pin) |
+| Marcus (code-quality) | Security / reliability / supply chain | CHANGES_REQUESTED → APPROVED on re-verify |
+| Rex (git-auditor) | Branch audit vs story File List | CHANGES_REQUESTED (uncommitted state.yaml) |
+| Kai (devops) | OIDC trust, deploy gating, composite ordering | CHANGES_REQUESTED |
+
+### Findings summary
+
+Total: **15** (0 CRITICAL, 4 HIGH, 5 MEDIUM, 6 LOW). All resolved in commit `b8b62ac` + README drift follow-up.
+
+**HIGH (4)** — workflow_dispatch branch guard, SHA-pin all third-party actions, remove redundant composite inner checkout, Node version read from `package.json engines.node` (AC2/AC12 compliance).
+
+**MEDIUM (5)** — commit dangling state.yaml, README EC2 → ECS Fargate rewrite, conditional `cancel-in-progress` on CI concurrency, inline comment on pnpm/setup-node ordering constraint, move actionlint step first for fail-fast on workflow syntax.
+
+**LOW (6)** — deploy-api ticket TBD annotation, `id-token: write` documentation in README, required-reviewers note on `production` env, coverage artifact glob widened, `.aped/WORKTREE` annotated as gitignored, git-audit.sh parser tightened (engine-level, local-only since `.aped/` is gitignored).
+
+### Re-verify
+
+- `actionlint .github/workflows/ci.yml .github/workflows/deploy.yml` → exit 0
+- `grep -RE "AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY" .github/` → zero matches
+- YAML parse on all 3 files → OK
+- `bash .aped/aped-review/scripts/git-audit.sh ...` → clean
+
+### Outcome
+
+**APPROVED — status: done.** All 13 ACs met with literal AC2/AC12 compliance (Node version derived from `package.json`, not hardcoded in YAML). Supply-chain risk mitigated via SHA-pinning of all third-party actions. `workflow_dispatch` constrained to `refs/heads/main`. Composite action double-checkout eliminated. Coverage artifact now captures any monorepo app/package via glob.

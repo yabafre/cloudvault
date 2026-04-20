@@ -152,7 +152,7 @@ Le déploiement passe par GitHub Actions (`.github/workflows/deploy.yml`) :
 
 - trigger : succès CI sur `main` ou `workflow_dispatch` depuis `main` uniquement
 - gate : environnement GitHub `production` (approbation manuelle obligatoire)
-- auth : OIDC vers AWS via `aws-actions/configure-aws-credentials@v4` (aucune clé IAM long-lived)
+- auth : OIDC vers AWS via `aws-actions/configure-aws-credentials` (SHA-pinned, aucune clé IAM long-lived)
 - 3 jobs parallèles : `deploy-infra` (CDK), `deploy-api` (Fargate), `deploy-lambda`
 
 Le bootstrap du provider OIDC + rôle IAM est suivi dans KON-88 (story 1-7).
@@ -180,7 +180,7 @@ Le repository utilise **GitHub Actions** avec authentification OIDC vers AWS.
 
 - **`.github/workflows/ci.yml`** — déclenché sur chaque pull request et push sur `main`. Exécute `pnpm lint`, `pnpm test`, `pnpm build`, upload la couverture, et lint les workflows avec `actionlint`.
 - **`.github/workflows/deploy.yml`** — déclenché après succès de CI sur `main` ou via `workflow_dispatch`. Contient trois jobs (`deploy-infra`, `deploy-api`, `deploy-lambda`) derrière l'environnement `production` (approbation manuelle GitHub).
-- **`.github/actions/setup-monorepo`** — composite action partagée : pnpm 9, Node 20, install, `prisma generate`.
+- **`.github/actions/setup-monorepo`** — composite action partagée : pnpm 9 (depuis `packageManager` du `package.json`), Node (depuis `engines.node`), install, `prisma generate`. Toutes les actions tierces sont SHA-pinned.
 
 ### Repository secrets requis
 
