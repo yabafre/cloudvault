@@ -2,19 +2,18 @@ import { Controller, type INestApplication, Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { Implement, ORPCError } from '@orpc/nest';
+import { Implement, implement, ORPCError } from '@orpc/nest';
 import { ORPCModule } from '@orpc/nest';
 import {
   experimental_RethrowHandlerPlugin as RethrowHandlerPlugin,
 } from '@orpc/server/plugins';
 import { oc } from '@orpc/contract';
-import { os } from '@orpc/server';
 import { z } from '@cloudvault/zod';
 import request from 'supertest';
-import type { App } from 'supertest/types';
+type App = Parameters<typeof request>[0];
 
-import { OrpcErrorFilter } from '../src/orpc/orpc-error.filter';
-import { rethrowAdHocErrors } from '../src/orpc/rethrow-ad-hoc-filter';
+import { OrpcErrorFilter } from '../src/orpc/orpc-error.filter.js';
+import { rethrowAdHocErrors } from '../src/orpc/rethrow-ad-hoc-filter.js';
 
 const boomContract = oc.router({
   raw: oc.route({ method: 'GET', path: '/boom-raw' }).output(z.object({ ok: z.boolean() })),
@@ -27,14 +26,14 @@ const boomContract = oc.router({
 class BoomController {
   @Implement(boomContract.raw)
   boomRaw() {
-    return os.handler(() => {
+    return implement(boomContract.raw).handler(() => {
       throw new Error('secret internals');
     });
   }
 
   @Implement(boomContract.typed)
   boomTyped() {
-    return os.handler(() => {
+    return implement(boomContract.typed).handler(() => {
       throw new ORPCError('VALIDATION_ERROR', {
         status: 400,
         message: 'nope',

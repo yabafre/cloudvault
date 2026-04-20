@@ -4,11 +4,11 @@ import { HealthOrpcHandler } from './health.orpc.js';
 import type { HealthService } from './health.service.js';
 
 describe('HealthOrpcHandler', () => {
-  let healthService: { check: jest.Mock };
+  let healthService: { check: jest.MockedFunction<HealthService['check']> };
   let handler: HealthOrpcHandler;
 
   beforeEach(() => {
-    healthService = { check: jest.fn() };
+    healthService = { check: jest.fn<HealthService['check']>() };
     handler = new HealthOrpcHandler(healthService as unknown as HealthService);
   });
 

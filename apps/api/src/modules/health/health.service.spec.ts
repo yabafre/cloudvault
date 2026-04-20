@@ -35,8 +35,8 @@ describe('HealthService', () => {
   });
 
   it('returns { database: "ok", storage: "ok" } + degraded=false when both probes succeed', async () => {
-    (prisma.$queryRaw as jest.Mock).mockResolvedValue([{ '?column?': 1 }]);
-    (storage.check as jest.Mock).mockResolvedValue('ok');
+    (prisma.$queryRaw as jest.MockedFunction<PrismaService['$queryRaw']>).mockResolvedValue([{ '?column?': 1 }]);
+    (storage.check as jest.MockedFunction<StorageHealthIndicator['check']>).mockResolvedValue('ok');
 
     const result = await service.check();
 
@@ -48,8 +48,8 @@ describe('HealthService', () => {
   });
 
   it('returns database=error + degraded=true when Prisma $queryRaw throws, and logs a warning with the underlying error message', async () => {
-    (prisma.$queryRaw as jest.Mock).mockRejectedValue(new Error('db down'));
-    (storage.check as jest.Mock).mockResolvedValue('ok');
+    (prisma.$queryRaw as jest.MockedFunction<PrismaService['$queryRaw']>).mockRejectedValue(new Error('db down'));
+    (storage.check as jest.MockedFunction<StorageHealthIndicator['check']>).mockResolvedValue('ok');
 
     const result = await service.check();
 
@@ -63,8 +63,8 @@ describe('HealthService', () => {
   });
 
   it('returns storage=error + degraded=true when storage indicator returns "error"', async () => {
-    (prisma.$queryRaw as jest.Mock).mockResolvedValue([{ '?column?': 1 }]);
-    (storage.check as jest.Mock).mockResolvedValue('error');
+    (prisma.$queryRaw as jest.MockedFunction<PrismaService['$queryRaw']>).mockResolvedValue([{ '?column?': 1 }]);
+    (storage.check as jest.MockedFunction<StorageHealthIndicator['check']>).mockResolvedValue('error');
 
     const result = await service.check();
 
@@ -76,8 +76,8 @@ describe('HealthService', () => {
   });
 
   it('returns both=error + degraded=true when both probes fail', async () => {
-    (prisma.$queryRaw as jest.Mock).mockRejectedValue(new Error('neon unreachable'));
-    (storage.check as jest.Mock).mockResolvedValue('error');
+    (prisma.$queryRaw as jest.MockedFunction<PrismaService['$queryRaw']>).mockRejectedValue(new Error('neon unreachable'));
+    (storage.check as jest.MockedFunction<StorageHealthIndicator['check']>).mockResolvedValue('error');
 
     const result = await service.check();
 
@@ -89,8 +89,8 @@ describe('HealthService', () => {
   });
 
   it('treats a Prisma query that never resolves as database=error (500ms timeout race)', async () => {
-    (prisma.$queryRaw as jest.Mock).mockImplementation(() => new Promise(() => {}));
-    (storage.check as jest.Mock).mockResolvedValue('ok');
+    (prisma.$queryRaw as jest.MockedFunction<PrismaService['$queryRaw']>).mockImplementation(() => new Promise(() => {}) as never);
+    (storage.check as jest.MockedFunction<StorageHealthIndicator['check']>).mockResolvedValue('ok');
 
     const result = await service.check();
 

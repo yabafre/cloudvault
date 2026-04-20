@@ -10,12 +10,12 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { Logger as PinoLogger } from 'nestjs-pino';
 import request from 'supertest';
-import type { App } from 'supertest/types';
+type App = Parameters<typeof request>[0];
 import {
   LoggerModule,
   REQUEST_ID_HEADER,
   RequestIdMiddleware,
-} from '../src/common/logger';
+} from '../src/common/logger/index.js';
 
 const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

@@ -8,14 +8,14 @@ import {
 } from '@orpc/server/plugins';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import request from 'supertest';
-import type { App } from 'supertest/types';
+type App = Parameters<typeof request>[0];
 
-import { OrpcErrorFilter } from '../src/orpc/orpc-error.filter';
-import { rethrowAdHocErrors } from '../src/orpc/rethrow-ad-hoc-filter';
-import { HealthOrpcHandler } from '../src/modules/health/health.orpc';
-import { HealthService } from '../src/modules/health/health.service';
-import { StorageHealthIndicator } from '../src/modules/health/storage.indicator';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { OrpcErrorFilter } from '../src/orpc/orpc-error.filter.js';
+import { rethrowAdHocErrors } from '../src/orpc/rethrow-ad-hoc-filter.js';
+import { HealthOrpcHandler } from '../src/modules/health/health.orpc.js';
+import { HealthService } from '../src/modules/health/health.service.js';
+import { StorageHealthIndicator } from '../src/modules/health/storage.indicator.js';
+import { PrismaService } from '../src/prisma/prisma.service.js';
 
 type ProbeResult = 'ok' | 'error';
 
