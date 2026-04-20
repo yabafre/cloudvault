@@ -131,19 +131,19 @@ sprint:
       ticket: "KON-87"
       file: "docs/aped/stories/1-6-health-endpoint.md"
       depends_on: ["1-3-orpc-nest-adapter"]
-      worktree: "../CloudVault-official__worktrees/feature-kon-87-1-6-health-endpoint"
+      worktree: null
     1-7-aws-cdk-stacks:
       status: done
       ticket: "KON-88"
       file: "docs/aped/stories/1-7-aws-cdk-stacks.md"
       depends_on: []
-      worktree: "../CloudVault-official__worktrees/feature-kon-88-1-7-aws-cdk-stacks"
+      worktree: null
     1-8-github-actions-ci-cd:
       status: done
       ticket: "KON-89"
       file: "docs/aped/stories/1-8-github-actions-ci-cd.md"
       depends_on: []
-      worktree: "../CloudVault-official__worktrees/feature-kon-89-1-8-github-actions-ci-cd"
+      worktree: null
     2-1-auth-orpc-migration:
       status: pending
       ticket: "KON-90"
